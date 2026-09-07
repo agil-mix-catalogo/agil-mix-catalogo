@@ -20,7 +20,6 @@ DB_PATH = 'dalvan.db'
 # >>> WHATSAPP DA EMPRESA <<<
 WHATSAPP_LOJA = '5581996716172'
 
-# Caminho relativo da pasta de mostruários
 PASTA_MOSTRUARIOS = os.path.join('imagens', 'mostruarios')
 
 TEMPLATE_HTML = """
@@ -36,7 +35,6 @@ TEMPLATE_HTML = """
         h1 { margin: 0; color: #FACC15; font-size: 24px; }
         p { color: #94A3B8; font-size: 14px; margin: 5px 0 0 0; }
         
-        /* Estilos do Slider de Mostruário */
         .slider-container { max-width: 900px; margin: 20px auto; position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #2E3F66; background-color: #1F2A44; }
         .slider-track { display: flex; transition: transform 0.5s ease-in-out; }
         .slide { min-width: 100%; box-sizing: border-box; position: relative; }
@@ -54,7 +52,6 @@ TEMPLATE_HTML = """
 
         .container { max-width: 900px; margin: 20px auto; padding: 10px; }
         
-        /* Estilos para a Barra de Pesquisa Múltipla */
         .search-container { background-color: #1F2A44; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #2E3F66; display: flex; gap: 10px; flex-direction: column; }
         .search-row { display: flex; gap: 10px; width: 100%; }
         .search-container input { flex-grow: 1; padding: 10px 15px; border-radius: 6px; border: 1px solid #2E3F66; background-color: #0F172A; color: #FFF; font-size: 14px; outline: none; }
@@ -68,7 +65,7 @@ TEMPLATE_HTML = """
         .prod-corpo { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
         
         .prod-fotos-container { display: flex; gap: 10px; flex-shrink: 0; }
-        .prod-img-grande { width: 120px; height: 120px; background-color: #0F172A; border-radius: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 12px; text-align: center; border: 2px solid #2563EB; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s; }
+        .prod-img-grande { width: 120px; height: 120px; background-color: #0F172A; border-radius: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 11px; text-align: center; border: 2px solid #2563EB; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s; padding: 4px; box-sizing: border-box; overflow: hidden; word-break: break-all; }
         .prod-img-grande:hover { transform: scale(1.02); }
         
         .prod-detalhes { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
@@ -98,7 +95,6 @@ TEMPLATE_HTML = """
         <p>Escolha a quantidade por tamanho e finalize direto pelo WhatsApp</p>
     </header>
 
-    <!-- Slider / Mostruário Dinâmico -->
     {% if mostruarios %}
     <div class="slider-container">
         <button class="slider-btn slider-prev" onclick="mudarSlide(-1)">&#10094;</button>
@@ -122,16 +118,15 @@ TEMPLATE_HTML = """
     {% endif %}
 
     <div class="container" style="margin-bottom: 140px;">
-        <!-- Barra de Pesquisa Múltipla por Referência / Nome / Código -->
         <form method="GET" action="/" class="search-container">
             <div class="search-row">
-                <input type="text" name="busca" value="{{ termo_busca }}" placeholder="Ex: C640, CP7259, bermuda, calça (separe por espaços para buscar vários)...">
+                <input type="text" name="busca" value="{{ termo_busca }}" placeholder="Ex: C640, CP7259, bermuda, calça...">
                 <button type="submit">🔍 Buscar</button>
                 {% if termo_busca %}
                 <a href="/" class="btn-limpar">Limpar</a>
                 {% endif %}
             </div>
-            <p class="search-hint">💡 Dica: Você pode digitar várias referências ou termos de uma só vez (ex: <i>C640 CP7259 calça</i>).</p>
+            <p class="search-hint">💡 Dica: Você pode digitar várias referências ou termos de uma só vez.</p>
         </form>
 
         <form action="/enviar_pedido" method="POST" id="formPedido">
@@ -140,13 +135,13 @@ TEMPLATE_HTML = """
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
                         {% if p[6] and p[6] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[6]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[6]) }}')" onerror="this.style.display='none'" title="Frente (Ampliar)">
+                        <img src="{{ url_for('ver_imagem', caminho=p[6]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[6]) }}')" title="Frente (Ampliar)" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('div'), {className: 'prod-img-grande', innerText: 'Erro: ' + '{{ p[6] }}'}));">
                         {% else %}
                         <div class="prod-img-grande">Sem Foto</div>
                         {% endif %}
 
                         {% if p[14] is defined and p[14] and p[14] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[14]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[14]) }}')" onerror="this.style.display='none'" title="Costas (Ampliar)">
+                        <img src="{{ url_for('ver_imagem', caminho=p[14]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[14]) }}')" title="Costas (Ampliar)" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('div'), {className: 'prod-img-grande', innerText: 'Erro: ' + '{{ p[14] }}'}));">
                         {% endif %}
                     </div>
 
@@ -252,51 +247,25 @@ TEMPLATE_SUCESSO = """
         .card-sucesso { background-color: #1F2A44; padding: 40px; border-radius: 12px; border: 1px solid #2E3F66; box-shadow: 0 4px 15px rgba(0,0,0,0.5); max-width: 450px; width: 90%; }
         h1 { color: #FACC15; font-size: 22px; margin-bottom: 10px; }
         p { color: #94A3B8; font-size: 15px; margin-bottom: 25px; }
-        
-        .btn-zap { background-color: #22C55E; color: #000; font-weight: bold; border: none; padding: 14px 20px; border-radius: 6px; font-size: 16px; cursor: pointer; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; margin-bottom: 15px; transition: all 0.3s; }
-        .btn-zap:hover { background-color: #16a34a; }
-        .btn-zap.clicado { background-color: #15803d !important; color: #cbd5e1 !important; pointer-events: none !important; opacity: 0.7; }
-        
-        .btn-voltar { background-color: #0F172A; color: #64748B; font-weight: bold; border: 1px solid #1E293B; padding: 12px 20px; border-radius: 6px; font-size: 14px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; pointer-events: none; opacity: 0.5; transition: all 0.3s; }
-        .btn-voltar.liberado { background-color: #0F172A; color: #38BDF8; border: 1px solid #2E3F66; pointer-events: auto; opacity: 1; cursor: pointer; }
-        .btn-voltar.liberado:hover { background-color: #1E293B; }
+        .btn-zap { background-color: #22C55E; color: #000; font-weight: bold; border: none; padding: 14px 20px; border-radius: 6px; font-size: 16px; cursor: pointer; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; margin-bottom: 15px; }
+        .btn-voltar { background-color: #0F172A; color: #38BDF8; font-weight: bold; border: 1px solid #2E3F66; padding: 12px 20px; border-radius: 6px; font-size: 14px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <div class="card-sucesso">
         <h1>Pedido Registrado com Sucesso! 🎉</h1>
         <p>O estoque foi atualizado e seu pedido foi montado. Clique abaixo para enviar para o WhatsApp da loja.</p>
-        
         {% if disponivel and link_zap %}
         <button id="btnZap" class="btn-zap" onclick="executarWhatsApp()">💬 Enviar Pedido para o WhatsApp</button>
-        {% else %}
-        <button class="btn-zap clicado" disabled>✔ Pedido já enviado</button>
         {% endif %}
-        
-        <a href="{{ url_for('index') }}" id="btnVoltar" class="btn-voltar {% if not disponivel %}liberado{% endif %}">🔄 Voltar ao Catálogo</a>
+        <a href="{{ url_for('index') }}" id="btnVoltar" class="btn-voltar">🔄 Voltar ao Catálogo</a>
     </div>
-
     <script>
         const link_zap_raw = "{{ link_zap|safe if link_zap else '' }}";
-        var jaAbriu = false;
-
         function executarWhatsApp() {
-            if (jaAbriu || !link_zap_raw) return;
-            jaAbriu = true;
-
-            var btnZap = document.getElementById('btnZap');
-            var btnVoltar = document.getElementById('btnVoltar');
-
-            btnZap.innerHTML = '✔ Abrindo WhatsApp...';
-            btnZap.classList.add('clicado');
-
-            btnVoltar.classList.add('liberado');
-
+            if (!link_zap_raw) return;
             fetch('/consumir_pedido', { method: 'POST' });
-
-            setTimeout(function() {
-                window.open(link_zap_raw, '_blank');
-            }, 300);
+            setTimeout(function() { window.open(link_zap_raw, '_blank'); }, 300);
         }
     </script>
 </body>
@@ -318,19 +287,17 @@ def from_json_filter(s):
 
 @app.route('/ver_imagem')
 def ver_imagem():
-  caminho = request.args.get('caminho', '')
+  caminho = request.args.get('caminho', '').strip()
   if not caminho:
     return '', 404
 
-  # Extrai apenas o nome do arquivo da imagem, ignorando caminhos absolutos do Windows ou locais
+  # Tenta buscar pelo nome exato do arquivo na pasta de produtos
   nome_arquivo = os.path.basename(caminho)
-
-  # Procura o arquivo na pasta relativa de produtos no servidor
   caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
   if os.path.exists(caminho_local):
     return send_file(caminho_local)
 
-  # Fallback: tenta buscar diretamente caso seja um caminho relativo válido
+  # Tenta procurar caso o caminho passado seja relativo direto
   if os.path.exists(caminho):
     return send_file(caminho)
 
@@ -377,7 +344,6 @@ def index():
         parametros.extend([p_like, p_like, p_like, p_like])
 
       sql_where = 'WHERE grupo LIKE ? AND (' + ' OR '.join(condicoes) + ')'
-
       query = f"""
             SELECT id, codigo, nome, descricao, preco, estoque, foto_caminho, 
                    preco_custo, estoque_minimo, grupo, referencia, fornecedor, 
@@ -433,67 +399,39 @@ def enviar_pedido():
                 status TEXT DEFAULT 'PENDENTE'
             )
         """)
-
-    colunas_existentes = [
-        col[1] for col in cursor.execute('PRAGMA table_info(contas_receber)')
-    ]
-    if 'telefone' not in colunas_existentes:
-      cursor.execute('ALTER TABLE contas_receber ADD COLUMN telefone TEXT')
-    if 'data' not in colunas_existentes:
-      cursor.execute('ALTER TABLE contas_receber ADD COLUMN data TEXT')
-    if 'status' not in colunas_existentes:
-      cursor.execute(
-          "ALTER TABLE contas_receber ADD COLUMN status TEXT DEFAULT 'PENDENTE'"
-      )
-
     for chave, value in request.form.items():
       if chave.startswith('item_'):
         qtd = int(value) if value.isdigit() else 0
         if qtd > 0:
           partes = chave.split('_')
-          prod_id = partes[1]
-          tamanho = partes[2]
-
+          prod_id, tamanho = partes[1], partes[2]
           cursor.execute(
               'SELECT nome, preco, estoque, grade_json, referencia FROM produtos WHERE id = ?',
               (prod_id,),
           )
           p = cursor.fetchone()
           if p:
-            nome_prod, preco, estoque_geral, grade_json_str, referencia = (
-                p[0],
-                p[1],
-                p[2],
-                p[3],
-                p[4],
-            )
+            nome_prod, preco, estoque_geral, grade_json_str, referencia = p
             subtotal = qtd * preco
             total_geral += subtotal
-
             ref_texto = f' (Ref: {referencia})' if referencia else ''
             itens_pedido.append(
                 f'• {qtd}x {nome_prod}{ref_texto} (Tam: {tamanho}) - R$'
                 f' {subtotal:.2f}'.replace('.', ',')
             )
 
-            grade_dict = {}
-            try:
-              grade_dict = json.loads(grade_json_str) if grade_json_str else {}
-            except:
-              grade_dict = {}
-
+            grade_dict = (
+                json.loads(grade_json_str) if grade_json_str else {}
+            )
             atual_tam = float(grade_dict.get(tamanho, 0.0))
             novo_tam = max(0.0, atual_tam - qtd)
             grade_dict[tamanho] = (
                 int(novo_tam) if novo_tam.is_integer() else novo_tam
             )
-
             novo_est_geral = max(0.0, float(estoque_geral or 0) - qtd)
-            novo_grade_json = json.dumps(grade_dict)
-
             cursor.execute(
                 'UPDATE produtos SET estoque = ?, grade_json = ? WHERE id = ?',
-                (novo_est_geral, novo_grade_json, prod_id),
+                (novo_est_geral, json.dumps(grade_dict), prod_id),
             )
 
     if not itens_pedido:
@@ -510,7 +448,6 @@ def enviar_pedido():
         """,
         (nome, tel, total_geral, data_atual),
     )
-
     conn.commit()
   finally:
     conn.close()
@@ -526,7 +463,6 @@ def enviar_pedido():
   import urllib.parse
 
   link_zap = f'https://web.whatsapp.com/send?phone={WHATSAPP_LOJA}&text={urllib.parse.quote(msg)}'
-
   session['link_zap'] = link_zap
   session['disponivel'] = True
 
@@ -535,10 +471,10 @@ def enviar_pedido():
 
 @app.route('/sucesso')
 def sucesso():
-  link_zap = session.get('link_zap', '')
-  disponivel = session.get('disponivel', False)
   return render_template_string(
-      TEMPLATE_SUCESSO, link_zap=link_zap, disponivel=disponivel
+      TEMPLATE_SUCESSO,
+      link_zap=session.get('link_zap', ''),
+      disponivel=session.get('disponivel', False),
   )
 
 
@@ -550,5 +486,4 @@ def consumir_pedido():
 
 
 if __name__ == '__main__':
-  print('Servidor do Catálogo Online rodando em http://127.0.0.1:5000')
   app.run(host='0.0.0.0', port=5000, debug=True)
