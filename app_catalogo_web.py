@@ -288,7 +288,6 @@ def ver_imagem_id(prod_id):
   if not os.path.exists(pasta_produtos):
     return '', 404
 
-  # Varre todos os arquivos da pasta e busca por qualquer extensão que comece com o ID exato (ex: 1.jpg, 1.jpeg, 1.png, etc.)
   for arquivo in os.listdir(pasta_produtos):
     nome_sem_ext, _ = os.path.splitext(arquivo)
     if nome_sem_ext.strip() == str(prod_id):
