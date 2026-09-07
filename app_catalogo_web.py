@@ -65,7 +65,7 @@ TEMPLATE_HTML = """
         .prod-corpo { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
         
         .prod-fotos-container { display: flex; gap: 10px; flex-shrink: 0; }
-        .prod-img-grande { width: 120px; height: 120px; background-color: #0F172A; border-radius: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 11px; text-align: center; border: 2px solid #2563EB; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s; padding: 4px; box-sizing: border-box; overflow: hidden; word-break: break-all; }
+        .prod-img-grande { width: 120px; height: 120px; background-color: #0F172A; border-radius: 10px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 11px; text-align: center; border: 2px solid #2563EB; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s; padding: 4px; box-sizing: border-box; overflow: hidden; }
         .prod-img-grande:hover { transform: scale(1.02); }
         
         .prod-detalhes { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
@@ -291,34 +291,22 @@ def ver_imagem():
   if not caminho:
     return '', 404
 
-  # Limpa o caminho removendo referências absolutas ou corrompidas do Windows
-  # Substitui barras invertidas por normais para garantir consistência
-  caminho_limpo = caminho.replace('\\', '/')
-
-  # Pega apenas o nome do arquivo se houver qualquer barra
-  if '/' in caminho_limpo:
-    nome_arquivo = caminho_limpo.split('/')[-1]
-  else:
-    # Caso venha grudado sem barra (ex: C:Sistema Agilimagensprodutos321564987.jpeg)
-    # Procura a extensão e extrai os últimos caracteres do nome do arquivo
-    nome_arquivo = os.path.basename(caminho)
-    for ext in ['.jpeg', '.jpg', '.png', '.webp', '.gif']:
-      if ext in caminho.lower():
-        idx = caminho.lower().rfind(ext)
-        # Pega um pedaço seguro para trás para formar o nome do arquivo
-        trecho = caminho[: idx + len(ext)]
-        nome_arquivo = os.path.basename(trecho.replace('\\', '/'))
-        break
-
-  # Procura o arquivo na pasta correta do servidor
-  caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
-  if os.path.exists(caminho_local):
-    return send_file(caminho_local)
-
-  # Segunda tentativa: varre a pasta de produtos procurando pelo nome exato caso o parse falhe
   pasta_produtos = os.path.join('imagens', 'produtos')
+
+  # Extrai apenas os números contidos no caminho (ex: '321564987') para achar o arquivo correspondente
+  import re
+
+  digitos = ''.join(re.findall(r'\d+', caminho))
+
   if os.path.exists(pasta_produtos):
+    # Procura na pasta um arquivo que comece com os dígitos do produto
     for f in os.listdir(pasta_produtos):
+      f_digitos = ''.join(re.findall(r'\d+', f))
+      if digitos and f_digitos and digitos in f_digitos:
+        return send_file(os.path.join(pasta_produtos, f))
+
+      # Tenta também correspondência exata pelo nome base limpo
+      nome_arquivo = os.path.basename(caminho.replace('\\', '/'))
       if f.lower() == nome_arquivo.lower():
         return send_file(os.path.join(pasta_produtos, f))
 
@@ -507,6 +495,10 @@ def consumir_pedido():
   session['disponivel'] = False
   session['link_zap'] = ''
   return '', 204
+
+
+if __name__ == '__main__':
+  app.run(host='0.0.0.0', port=5000, debug=True)
 
 
 if __name__ == '__main__':
