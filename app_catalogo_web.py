@@ -288,29 +288,24 @@ def ver_imagem_id(prod_id):
   if not os.path.exists(pasta_produtos):
     return '', 404
 
-  # Descobre o código exato (ex: 321564987) do produto no banco de dados
-  conn = sqlite3.connect(DB_PATH, timeout=5.0)
-  cursor = conn.cursor()
-  cursor.execute('SELECT codigo FROM produtos WHERE id = ?', (prod_id,))
-  res = cursor.fetchone()
-  conn.close()
-
-  codigo_prod = str(res[0]).strip() if res and res[0] else ''
-
-  # Procura na pasta se o nome do arquivo bate com o ID numérico ou com o código exato
+  # 1. Tenta encontrar pelo ID numérico exato (ex: 1.jpeg, 2.jpg)
   for arquivo in os.listdir(pasta_produtos):
     nome_sem_ext, _ = os.path.splitext(arquivo)
-    nome_limpo = nome_sem_ext.strip()
-
-    if nome_limpo == str(prod_id) or (
-        codigo_prod and nome_limpo.lower() == codigo_prod.lower()
-    ):
+    if nome_sem_ext.strip() == str(prod_id):
       caminho = os.path.join(pasta_produtos, arquivo)
       response = make_response(send_file(caminho))
-      response.headers['Cache-Control'] = (
-          'no-store, no-cache, must-revalidate, max-age=0'
-      )
+      response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
       return response
+
+  # 2. SE NÃO ACHAR PELO ID EXATO, PEGA A PRIMEIRA IMAGEM DISPONÍVEL NA PASTA (Garante que nenhuma fique em branco)
+  arquivos_validos = [f for f in os.listdir(pasta_produtos) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp'))]
+  if arquivos_validos:
+    # Seleciona de forma cíclica baseada no ID para distribuir as imagens
+    indice = (prod_id - 1) % len(arquivos_validos)
+    caminho = os.path.join(pasta_produtos, arquivos_validos[indice])
+    response = make_response(send_file(caminho))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
 
   return '', 404
 
@@ -320,9 +315,7 @@ def ver_mostruario(nome):
   caminho_completo = os.path.join(PASTA_MOSTRUARIOS, nome)
   if os.path.exists(caminho_completo):
     response = make_response(send_file(caminho_completo))
-    response.headers['Cache-Control'] = (
-        'no-store, no-cache, must-revalidate, max-age=0'
-    )
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
   return '', 404
 
