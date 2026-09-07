@@ -284,21 +284,18 @@ def from_json_filter(s):
 
 @app.route('/ver_imagem_id/<int:prod_id>')
 def ver_imagem_id(prod_id):
-  # Varre recursivamente todas as pastas e subpastas dentro de 'imagens/produtos'
-  raiz_produtos = os.path.join('imagens', 'produtos')
-  if not os.path.exists(raiz_produtos):
+  pasta_produtos = os.path.join('imagens', 'produtos')
+  if not os.path.exists(pasta_produtos):
     return '', 404
 
-  extensoes = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG']
-
-  for pasta_atual, _, arquivos in os.walk(raiz_produtos):
-    for ext in extensoes:
-      nome_procurado = f'{prod_id}{ext}'
-      if nome_procurado in arquivos:
-        caminho_arquivo = os.path.join(pasta_atual, nome_procurado)
-        response = make_response(send_file(caminho_arquivo))
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        return response
+  # Varre todos os arquivos da pasta e busca por qualquer extensão que comece com o ID exato (ex: 1.jpg, 1.jpeg, 1.png, etc.)
+  for arquivo in os.listdir(pasta_produtos):
+    nome_sem_ext, _ = os.path.splitext(arquivo)
+    if nome_sem_ext.strip() == str(prod_id):
+      caminho = os.path.join(pasta_produtos, arquivo)
+      response = make_response(send_file(caminho))
+      response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+      return response
 
   return '', 404
 
