@@ -293,22 +293,22 @@ def ver_imagem():
 
   pasta_produtos = os.path.join('imagens', 'produtos')
 
-  # Extrai apenas os números contidos no caminho (ex: '321564987') para achar o arquivo correspondente
+  # Extrai o código exato do produto (sequência numérica) de dentro do caminho corrompido do Windows
   import re
 
-  digitos = ''.join(re.findall(r'\d+', caminho))
+  match = re.search(r'(\d+)(?:\.jpeg|\.jpg|\.png|\.webp|\.gif)', caminho, re.IGNORECASE)
+  if match:
+    codigo_produto = match.group(1)
+    if os.path.exists(pasta_produtos):
+      for f in os.listdir(pasta_produtos):
+        if f.lower().startswith(codigo_produto.lower()):
+          return send_file(os.path.join(pasta_produtos, f))
 
-  if os.path.exists(pasta_produtos):
-    # Procura na pasta um arquivo que comece com os dígitos do produto
-    for f in os.listdir(pasta_produtos):
-      f_digitos = ''.join(re.findall(r'\d+', f))
-      if digitos and f_digitos and digitos in f_digitos:
-        return send_file(os.path.join(pasta_produtos, f))
-
-      # Tenta também correspondência exata pelo nome base limpo
-      nome_arquivo = os.path.basename(caminho.replace('\\', '/'))
-      if f.lower() == nome_arquivo.lower():
-        return send_file(os.path.join(pasta_produtos, f))
+  # Fallback caso encontre o nome exato do arquivo
+  nome_arquivo = os.path.basename(caminho.replace('\\', '/'))
+  caminho_local = os.path.join(pasta_produtos, nome_arquivo)
+  if os.path.exists(caminho_local):
+    return send_file(caminho_local)
 
   if os.path.exists(caminho):
     return send_file(caminho)
@@ -495,10 +495,6 @@ def consumir_pedido():
   session['disponivel'] = False
   session['link_zap'] = ''
   return '', 204
-
-
-if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=5000, debug=True)
 
 
 if __name__ == '__main__':
