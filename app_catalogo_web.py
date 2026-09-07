@@ -1,36 +1,136 @@
+# ============================================================
 # app_catalogo_web.py
-import sqlite3
+# ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE
+# ============================================================
+
 import json
 import os
-import urllib.parse
-from flask import Flask, render_template_string, request, redirect, url_for, send_file
+import sqlite3
+from datetime import datetime
+
+from flask import (
+    Flask,
+    redirect,
+    render_template_string,
+    request,
+    send_file,
+    session,
+    url_for,
+    make_response,
+)
+
+
+# ============================================================
+# CONFIGURAÇÃO
+# ============================================================
 
 app = Flask(__name__)
 
-DB_PATH = "dalvan.db"
-WHATSAPP_LOJA = "5581999998888"  # Substitua pelo WhatsApp da Ágil Aviamentos com DDD
+app.secret_key = 'dalvan_secret_key_2026'
 
+
+# ============================================================
+# CAMINHOS ABSOLUTOS
+# ============================================================
+
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+
+DB_PATH = os.path.join(
+    BASE_DIR,
+    'dalvan.db'
+)
+
+
+PASTA_IMAGENS = os.path.join(
+    BASE_DIR,
+    'imagens'
+)
+
+
+PASTA_PRODUTOS = os.path.join(
+    PASTA_IMAGENS,
+    'produtos'
+)
+
+
+PASTA_MOSTRUARIOS = os.path.join(
+    PASTA_IMAGENS,
+    'mostruarios'
+)
+
+
+# ============================================================
+# WHATSAPP
+# ============================================================
+
+WHATSAPP_LOJA = '5581996716172'
+
+
+# ============================================================
+# EXTENSÕES DE IMAGEM
+# ============================================================
+
+EXTENSOES_IMAGEM = (
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.bmp',
+    '.gif'
+)
+
+
+# ============================================================
+# TEMPLATE HTML
+# ============================================================
 
 TEMPLATE_HTML = """
+
 <!DOCTYPE html>
+
 <html lang="pt-BR">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ágil Aviamentos - Catálogo Online</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Ágil Mix Jeans Wear - Catálogo Online
+    </title>
+
 
     <style>
+
         * {
             box-sizing: border-box;
         }
 
+
         body {
             background-color: #172033;
             color: #E5E7EB;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family:
+                'Segoe UI',
+                Tahoma,
+                Geneva,
+                Verdana,
+                sans-serif;
             margin: 0;
             padding: 0;
         }
+
+
+        /* ====================================================
+           CABEÇALHO
+           ==================================================== */
 
         header {
             background-color: #1F2A44;
@@ -39,11 +139,13 @@ TEMPLATE_HTML = """
             border-bottom: 2px solid #2563EB;
         }
 
+
         h1 {
             margin: 0;
             color: #FACC15;
             font-size: 24px;
         }
+
 
         p {
             color: #94A3B8;
@@ -51,105 +153,370 @@ TEMPLATE_HTML = """
             margin: 5px 0 0 0;
         }
 
+
+        /* ====================================================
+           SLIDER
+           ==================================================== */
+
+        .slider-container {
+            max-width: 900px;
+            margin: 20px auto;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #2E3F66;
+            background-color: #1F2A44;
+        }
+
+
+        .slider-track {
+            display: flex;
+            transition:
+                transform 0.5s ease-in-out;
+        }
+
+
+        .slide {
+            min-width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+
+        .slide img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            display: block;
+        }
+
+
+        .slide-legenda {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background:
+                rgba(15, 23, 42, 0.85);
+            color: #FACC15;
+            padding: 10px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            border-top: 1px solid #2E3F66;
+        }
+
+
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color:
+                rgba(15, 23, 42, 0.7);
+            color: #FFF;
+            border: none;
+            padding: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+
+        .slider-btn:hover {
+            background-color: #2563EB;
+        }
+
+
+        .slider-prev {
+            left: 15px;
+        }
+
+
+        .slider-next {
+            right: 15px;
+        }
+
+
+        .slider-dots {
+            text-align: center;
+            padding: 10px;
+            background: #1F2A44;
+        }
+
+
+        .dot {
+            display: inline-block;
+            height: 10px;
+            width: 10px;
+            margin: 0 4px;
+            background-color: #475569;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+
+        .dot.active {
+            background-color: #FACC15;
+        }
+
+
+        /* ====================================================
+           CONTAINER
+           ==================================================== */
+
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 20px auto;
             padding: 10px;
         }
+
+
+        /* ====================================================
+           BUSCA
+           ==================================================== */
+
+        .search-container {
+            background-color: #1F2A44;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #2E3F66;
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+
+        .search-container input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #2E3F66;
+            background-color: #0F172A;
+            color: #FFF;
+            font-size: 14px;
+            outline: none;
+        }
+
+
+        .search-container button {
+            background-color: #2563EB;
+            color: #FFF;
+            font-weight: bold;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+
+        .search-container button:hover {
+            background-color: #1d4ed8;
+        }
+
+
+        .btn-limpar {
+            background-color: #475569 !important;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 15px;
+            border-radius: 6px;
+            color: #FFF;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+
+        .btn-limpar:hover {
+            background-color: #334155 !important;
+        }
+
+
+        .search-hint {
+            font-size: 12px;
+            color: #94A3B8;
+            margin: 0;
+        }
+
+
+        /* ====================================================
+           PRODUTO
+           ==================================================== */
 
         .produto-card {
             background-color: #1F2A44;
             border-radius: 12px;
             padding: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow:
+                0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid #2E3F66;
         }
 
-        .prod-info {
+
+        .prod-corpo {
             display: flex;
-            gap: 15px;
-            align-items: center;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
         }
 
-        /*
-         * FOTO PEQUENA DO CATÁLOGO
-         */
-        .prod-img {
-            width: 80px;
-            height: 80px;
-            min-width: 80px;
+
+        .prod-fotos-container {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+
+        .prod-img-grande {
+            width: 120px;
+            height: 120px;
             background-color: #0F172A;
-            border-radius: 8px;
+            border-radius: 10px;
             object-fit: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94A3B8;
+            font-size: 11px;
+            text-align: center;
+            border: 2px solid #2563EB;
+            box-shadow:
+                0 4px 10px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition:
+                transform 0.2s;
+            padding: 4px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+
+        .prod-img-grande:hover {
+            transform: scale(1.02);
+        }
+
+
+        .prod-detalhes {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+
+        .prod-nome {
+            font-size: 18px;
+            font-weight: bold;
+            color: #E5E7EB;
+        }
+
+
+        .prod-preco {
+            font-size: 17px;
+            color: #22C55E;
+            font-weight: bold;
+        }
+
+
+        /* ====================================================
+           SEM FOTO
+           ==================================================== */
+
+        .sem-foto {
+            width: 120px;
+            height: 120px;
+            background-color: #0F172A;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #94A3B8;
             font-size: 12px;
             text-align: center;
-            cursor: zoom-in;
-            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid #475569;
+            padding: 10px;
         }
 
-        .prod-img:hover {
-            transform: scale(1.06);
-            box-shadow: 0 0 0 2px #2563EB;
-        }
 
-        .prod-detalhes {
-            flex-grow: 1;
-        }
-
-        .prod-nome {
-            font-size: 16px;
-            font-weight: bold;
-            color: #E5E7EB;
-            margin-bottom: 4px;
-        }
-
-        .prod-preco {
-            font-size: 15px;
-            color: #22C55E;
-            font-weight: bold;
-        }
+        /* ====================================================
+           GRADE
+           ==================================================== */
 
         .grade-container {
-            margin-top: 12px;
+            margin-top: 15px;
             background-color: #0F172A;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
             justify-content: space-between;
+            border: 1px solid #1E293B;
         }
+
 
         .tamanho-box {
             display: flex;
             flex-direction: column;
             align-items: center;
+            background: #172033;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #2E3F66;
         }
 
+
         .tamanho-box label {
-            font-size: 11px;
+            font-size: 12px;
             color: #FACC15;
             font-weight: bold;
             margin-bottom: 2px;
         }
 
+
+        .tamanho-estoque {
+            font-size: 10px;
+            color: #38BDF8;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+
         .tamanho-box input {
-            width: 45px;
-            height: 30px;
+            width: 48px;
+            height: 32px;
             background-color: #1F2A44;
             border: 1px solid #2E3F66;
             color: #FFF;
             text-align: center;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 14px;
         }
+
+
+        /* ====================================================
+           CARRINHO
+           ==================================================== */
 
         .carrinho-float {
             position: fixed;
@@ -159,18 +526,21 @@ TEMPLATE_HTML = """
             background-color: #1F2A44;
             padding: 15px;
             border-top: 2px solid #2563EB;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+            box-shadow:
+                0 -4px 10px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             gap: 10px;
             z-index: 100;
         }
 
+
         .form-cliente {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
+
 
         .form-cliente input {
             flex-grow: 1;
@@ -181,6 +551,7 @@ TEMPLATE_HTML = """
             color: #FFF;
             font-size: 14px;
         }
+
 
         .btn-enviar {
             background-color: #22C55E;
@@ -193,304 +564,497 @@ TEMPLATE_HTML = """
             cursor: pointer;
             text-align: center;
             width: 100%;
+            text-decoration: none;
         }
+
 
         .btn-enviar:hover {
             background-color: #16a34a;
         }
 
 
-        /* =========================================================
-           MODAL DE IMAGEM AMPLIADA
-           ========================================================= */
+        /* ====================================================
+           MODAL
+           ==================================================== */
 
         #modalZoom {
             display: none;
             position: fixed;
-            z-index: 99999;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.96);
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color:
+                rgba(0,0,0,0.92);
             align-items: center;
             justify-content: center;
-            padding: 70px 30px 40px 30px;
-            overflow: hidden;
         }
 
-        /*
-         * A imagem agora pode ocupar praticamente toda a tela.
-         * width/height NÃO ficam em auto.
-         */
-        #imgAmpliada {
-            display: block;
-            width: auto;
+
+        .modal-conteudo {
+            width: 90vw;
+            max-width: 700px;
             height: auto;
-
-            /* tamanho máximo real da imagem na tela */
-            max-width: 95vw;
-            max-height: 88vh;
-
-            min-width: 200px;
-            min-height: 200px;
-
+            max-height: 85vh;
             object-fit: contain;
-            object-position: center;
-
             border-radius: 10px;
-            background: #111827;
-
-            box-shadow:
-                0 0 0 2px rgba(255,255,255,0.10),
-                0 20px 70px rgba(0,0,0,0.85);
-
-            cursor: zoom-in;
-
-            transition: transform 0.20s ease;
-            transform: scale(1);
+            background-color: #0F172A;
+            border: 2px solid #2563EB;
         }
 
-        /*
-         * Quando a foto é muito pequena, não deixamos o navegador
-         * manter os 80x80 do catálogo.
-         */
-        #imgAmpliada.ampliada {
-            max-width: 95vw !important;
-            max-height: 88vh !important;
-        }
-
-        .zoom-area {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: auto;
-            padding: 20px;
-        }
 
         .fechar {
             position: fixed;
-            top: 15px;
-            right: 20px;
+            top: 20px;
+            right: 25px;
             color: #fff;
-            font-size: 38px;
+            font-size: 40px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 100001;
-            background: rgba(0,0,0,0.75);
-            width: 52px;
-            height: 52px;
+            z-index: 10000;
+            background:
+                rgba(0,0,0,0.7);
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #fff;
-            line-height: 1;
-            user-select: none;
+            border: 1px solid #fff;
         }
 
-        .fechar:hover {
-            color: #22C55E;
-            border-color: #22C55E;
-            transform: scale(1.05);
-        }
 
-        .controles-zoom {
-            position: fixed;
-            bottom: 18px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100001;
-            display: flex;
-            gap: 8px;
-            background: rgba(0,0,0,0.78);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
+        /* ====================================================
+           RESPONSIVO
+           ==================================================== */
 
-        .controles-zoom button {
-            width: 44px;
-            height: 40px;
-            border: none;
-            border-radius: 8px;
-            background: #1F2A44;
-            color: white;
-            font-size: 21px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+        @media (max-width: 650px) {
 
-        .controles-zoom button:hover {
-            background: #2563EB;
-        }
-
-        .controles-zoom .btn-reset {
-            width: auto;
-            padding: 0 12px;
-            font-size: 13px;
-        }
-
-        @keyframes aparecerZoom {
-            from {
-                opacity: 0;
+            h1 {
+                font-size: 20px;
             }
-            to {
-                opacity: 1;
-            }
-        }
 
-        @keyframes imagemZoom {
-            from {
-                opacity: 0;
-                transform: scale(0.80);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
 
-        #modalZoom.aberto {
-            animation: aparecerZoom 0.18s ease-out;
-        }
-
-        #modalZoom.aberto #imgAmpliada {
-            animation: imagemZoom 0.22s ease-out;
-        }
-
-        @media (max-width: 600px) {
             .container {
                 padding: 8px;
             }
 
-            #modalZoom {
-                padding: 60px 8px 70px 8px;
+
+            .search-row {
+                flex-direction: column;
             }
 
-            #imgAmpliada {
-                max-width: 98vw;
-                max-height: 82vh;
+
+            .search-row button,
+            .btn-limpar {
+                width: 100%;
             }
 
-            .fechar {
-                top: 8px;
-                right: 8px;
-                width: 46px;
-                height: 46px;
-                font-size: 32px;
+
+            .prod-corpo {
+                flex-direction: column;
             }
 
-            .controles-zoom {
-                bottom: 8px;
+
+            .prod-fotos-container {
+                width: 100%;
+                justify-content: center;
             }
 
-            .prod-img {
-                width: 75px;
-                height: 75px;
-                min-width: 75px;
+
+            .prod-img-grande,
+            .sem-foto {
+                width: 150px;
+                height: 150px;
             }
+
+
+            .prod-detalhes {
+                width: 100%;
+            }
+
+
+            .prod-nome {
+                font-size: 16px;
+            }
+
+
+            .slider-container {
+                margin: 10px;
+            }
+
+
+            .slide img {
+                height: 280px;
+            }
+
+
+            .form-cliente {
+                flex-direction: column;
+            }
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
+
+    <!-- ====================================================
+         CABEÇALHO
+         ==================================================== -->
+
     <header>
-        <h1>Ágil Aviamentos & Confecções</h1>
-        <p>Clique na foto para ampliar • Escolha a grade e finalize pelo WhatsApp</p>
+
+        <h1>
+            Ágil Mix Jeans Wear - Catálogo Online
+        </h1>
+
+        <p>
+            Escolha a quantidade por tamanho e finalize direto pelo WhatsApp
+        </p>
+
     </header>
 
 
-    <div class="container" style="margin-bottom: 140px;">
+    <!-- ====================================================
+         SLIDER
+         ==================================================== -->
 
-        <form action="/enviar_pedido" method="POST" id="formPedido">
+    {% if mostruarios %}
+
+    <div class="slider-container">
+
+        <button
+            class="slider-btn slider-prev"
+            onclick="mudarSlide(-1)"
+        >
+            &#10094;
+        </button>
+
+
+        <button
+            class="slider-btn slider-next"
+            onclick="mudarSlide(1)"
+        >
+            &#10095;
+        </button>
+
+
+        <div
+            class="slider-track"
+            id="sliderTrack"
+        >
+
+            {% for img_nome in mostruarios %}
+
+            <div class="slide">
+
+                <img
+                    src="{{ url_for(
+                        'ver_mostruario',
+                        nome=img_nome
+                    ) }}"
+                    alt="Mostruário"
+                >
+
+
+                <div class="slide-legenda">
+                    ✨ Ágil Mix Jeans Wear - Coleção em Destaque
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <div
+            class="slider-dots"
+            id="sliderDots"
+        >
+
+            {% for img_nome in mostruarios %}
+
+            <span
+                class="dot {% if loop.first %}active{% endif %}"
+                onclick="definirSlide({{ loop.index0 }})"
+            ></span>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ====================================================
+         CATÁLOGO
+         ==================================================== -->
+
+    <div
+        class="container"
+        style="margin-bottom: 140px;"
+    >
+
+
+        <!-- BUSCA -->
+
+        <form
+            method="GET"
+            action="/"
+            class="search-container"
+        >
+
+            <div class="search-row">
+
+                <input
+                    type="text"
+                    name="busca"
+                    value="{{ termo_busca }}"
+                    placeholder="Ex: C640, CP7259, bermuda, calça..."
+                >
+
+
+                <button type="submit">
+                    🔍 Buscar
+                </button>
+
+
+                {% if termo_busca %}
+
+                <a
+                    href="/"
+                    class="btn-limpar"
+                >
+                    Limpar
+                </a>
+
+                {% endif %}
+
+            </div>
+
+
+            <p class="search-hint">
+                💡 Dica: Você pode digitar várias referências ou termos de uma só vez.
+            </p>
+
+        </form>
+
+
+        <!-- ==================================================
+             FORMULÁRIO DO PEDIDO
+             ================================================== -->
+
+        <form
+            action="/enviar_pedido"
+            method="POST"
+            id="formPedido"
+        >
+
 
             {% for p in produtos %}
 
             <div class="produto-card">
 
-                <div class="prod-info">
 
-                    {% if p[6] and p[6] != '' %}
+                <div class="prod-corpo">
 
-                    <img
-                        src="{{ url_for('ver_imagem', caminho=p[6]) }}"
-                        class="prod-img"
-                        data-imagem="{{ url_for('ver_imagem', caminho=p[6]) }}"
-                        onclick="abrirZoom(this.dataset.imagem)"
-                        onerror="this.style.display='none'"
-                        title="Clique para ampliar"
-                        alt="Foto do produto"
-                    >
 
-                    {% else %}
+                    <!-- FOTO -->
 
-                    <div class="prod-img">Sem Foto</div>
+                    <div class="prod-fotos-container">
 
-                    {% endif %}
 
+                        {% if p[0] %}
+
+
+                        {% if p[14] %}
+
+                        <img
+                            src="{{ url_for(
+                                'ver_imagem_id',
+                                prod_id=p[0]
+                            ) }}"
+                            class="prod-img-grande"
+                            onclick="abrirZoom(
+                                '{{ url_for(
+                                    'ver_imagem_id',
+                                    prod_id=p[0]
+                                ) }}'
+                            )"
+                            title="Foto do Produto - Ampliar"
+                            alt="Foto de {{ p[1] }}"
+                            onerror="fotoErro(this);"
+                        >
+
+
+                        {% else %}
+
+                        <div class="sem-foto">
+                            📷<br>
+                            Sem Foto
+                        </div>
+
+                        {% endif %}
+
+
+                        {% else %}
+
+                        <div class="sem-foto">
+                            📷<br>
+                            Sem Foto
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- DADOS -->
 
                     <div class="prod-detalhes">
+
 
                         <div class="prod-nome">
                             {{ p[1] }} - {{ p[2] }}
                         </div>
 
+
                         <div class="prod-preco">
-                            R$ {{ "%.2f"|format(p[4]) }}
+                            R$
+                            {{ "%.2f"|format(p[4]) }}
                         </div>
 
-                        <div style="font-size: 12px; color: #94A3B8; margin-top: 2px;">
-                            Grupo: {{ p[9] }} | Ref: {{ p[10] }}
+
+                        <div
+                            style="
+                                font-size: 13px;
+                                color: #94A3B8;
+                            "
+                        >
+                            Grupo:
+                            <b>{{ p[9] }}</b>
+                            |
+                            Ref:
+                            <b>{{ p[10] }}</b>
                         </div>
+
+
+                        <div
+                            style="
+                                font-size: 13px;
+                                color: #38BDF8;
+                            "
+                        >
+                            Estoque Total:
+                            <b>{{ p[5] }}</b>
+                            un
+                        </div>
+
+
+                        {% if p[14] %}
+
+                        <div
+                            style="
+                                font-size: 11px;
+                                color: #64748B;
+                                margin-top: 4px;
+                            "
+                        >
+                            📷 Foto:
+                            {{ p[14] }}
+                        </div>
+
+                        {% endif %}
+
 
                     </div>
 
                 </div>
 
 
-                {% if p[13] and p[13] != '{}' %}
+                <!-- ==================================================
+                     GRADE
+                     ================================================== -->
+
+                {% set grade_dict = p[13]|from_json %}
+
+
+                {% if grade_dict %}
 
                 <div class="grade-container">
 
-                    <span style="font-size: 12px; color: #94A3B8; width: 100%; margin-bottom: 4px;">
+
+                    <span
+                        style="
+                            font-size: 12px;
+                            color: #94A3B8;
+                            width: 100%;
+                            margin-bottom: 2px;
+                        "
+                    >
                         Quantidade por Tamanho:
                     </span>
 
-                    {% set grade = p[13]|from_json %}
 
-                    {% for tam, qtd_est in grade.items() %}
+                    {% for tam, qtd in grade_dict.items() %}
+
 
                     <div class="tamanho-box">
 
-                        <label>{{ tam }}</label>
+
+                        <label>
+                            {{ tam }}
+                        </label>
+
+
+                        <span class="tamanho-estoque">
+                            Disp: {{ qtd }}
+                        </span>
+
 
                         <input
                             type="number"
                             name="item_{{ p[0] }}_{{ tam }}"
                             value="0"
                             min="0"
-                            max="{{ qtd_est }}"
+                            max="{{ qtd }}"
                         >
+
 
                     </div>
 
+
                     {% endfor %}
+
 
                 </div>
 
                 {% endif %}
+
 
             </div>
 
             {% endfor %}
 
 
+            <!-- ==================================================
+                 CARRINHO
+                 ================================================== -->
+
             <div class="carrinho-float">
 
+
                 <div class="form-cliente">
+
 
                     <input
                         type="text"
@@ -499,6 +1063,7 @@ TEMPLATE_HTML = """
                         required
                     >
 
+
                     <input
                         type="tel"
                         name="cliente_tel"
@@ -506,367 +1071,1862 @@ TEMPLATE_HTML = """
                         required
                     >
 
+
                 </div>
 
-                <button type="submit" class="btn-enviar">
+
+                <button
+                    type="submit"
+                    class="btn-enviar"
+                >
                     🚀 Enviar Pedido Pronto para o WhatsApp
                 </button>
 
+
             </div>
+
 
         </form>
 
     </div>
 
 
-    <!-- =========================================================
-         MODAL DE IMAGEM AMPLIADA
-         ========================================================= -->
+    <!-- ====================================================
+         MODAL
+         ==================================================== -->
 
-    <div id="modalZoom" onclick="fecharZoom(event)">
+    <div
+        id="modalZoom"
+        onclick="fecharZoom()"
+    >
+
 
         <span
             class="fechar"
-            onclick="fecharZoom(event)"
-            title="Fechar"
+            onclick="fecharZoom()"
         >
             &times;
         </span>
 
-        <div class="zoom-area" onclick="fecharZoom(event)">
 
-            <img
-                id="imgAmpliada"
-                class="ampliada"
-                src=""
-                alt="Imagem ampliada"
-                onclick="event.stopPropagation()"
-            >
-
-        </div>
+        <img
+            class="modal-conteudo"
+            id="imgAmpliada"
+            onclick="event.stopPropagation();"
+        >
 
 
-        <div class="controles-zoom" onclick="event.stopPropagation()">
+    </div>
 
-            <button type="button" onclick="alterarZoom(-0.15)" title="Diminuir">
-                −
-            </button>
 
-            <button type="button" onclick="resetarZoom()" class="btn-reset">
-                100%
-            </button>
+    <!-- ====================================================
+         JAVASCRIPT
+         ==================================================== -->
 
-            <button type="button" onclick="alterarZoom(0.15)" title="Aumentar">
-                +
-            </button>
+    <script>
 
-        </div>
+
+        /* ==================================================
+           SLIDER
+           ================================================== */
+
+        let slideAtual = 0;
+
+
+        const slides =
+            document.querySelectorAll('.slide');
+
+
+        const dots =
+            document.querySelectorAll('.dot');
+
+
+        const totalSlides =
+            slides.length;
+
+
+        function mostrarSlide(index) {
+
+
+            if (totalSlides === 0) {
+                return;
+            }
+
+
+            if (index >= totalSlides) {
+
+                slideAtual = 0;
+
+            }
+
+            else if (index < 0) {
+
+                slideAtual =
+                    totalSlides - 1;
+
+            }
+
+            else {
+
+                slideAtual = index;
+
+            }
+
+
+            const track =
+                document.getElementById(
+                    'sliderTrack'
+                );
+
+
+            if (track) {
+
+                track.style.transform =
+                    'translateX(' +
+                    (-slideAtual * 100) +
+                    '%';
+
+            }
+
+
+            dots.forEach(
+                function(dot) {
+
+                    dot.classList.remove(
+                        'active'
+                    );
+
+                }
+            );
+
+
+            if (dots[slideAtual]) {
+
+                dots[slideAtual]
+                    .classList.add(
+                        'active'
+                    );
+
+            }
+
+        }
+
+
+        function mudarSlide(direcao) {
+
+            mostrarSlide(
+                slideAtual + direcao
+            );
+
+        }
+
+
+        function definirSlide(index) {
+
+            mostrarSlide(index);
+
+        }
+
+
+        if (totalSlides > 1) {
+
+            setInterval(
+                function() {
+
+                    mudarSlide(1);
+
+                },
+                4000
+            );
+
+        }
+
+
+        /* ==================================================
+           ZOOM
+           ================================================== */
+
+        function abrirZoom(src) {
+
+
+            if (!src) {
+                return;
+            }
+
+
+            const modal =
+                document.getElementById(
+                    "modalZoom"
+                );
+
+
+            const modalImg =
+                document.getElementById(
+                    "imgAmpliada"
+                );
+
+
+            modal.style.display = "flex";
+
+
+            modalImg.src = src;
+
+        }
+
+
+        function fecharZoom() {
+
+
+            const modal =
+                document.getElementById(
+                    "modalZoom"
+                );
+
+
+            const modalImg =
+                document.getElementById(
+                    "imgAmpliada"
+                );
+
+
+            modal.style.display = "none";
+
+
+            modalImg.src = "";
+
+        }
+
+
+        /* ==================================================
+           ERRO DE FOTO
+           ================================================== */
+
+        function fotoErro(img) {
+
+
+            if (!img) {
+                return;
+            }
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "sem-foto";
+
+
+            div.innerHTML =
+                "📷<br>Foto não encontrada";
+
+
+            img.parentNode.replaceChild(
+                div,
+                img
+            );
+
+        }
+
+
+        /* ==================================================
+           ESC FECHA ZOOM
+           ================================================== */
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+
+                if (
+                    event.key === "Escape"
+                ) {
+
+                    fecharZoom();
+
+                }
+
+            }
+        );
+
+
+    </script>
+
+
+</body>
+
+</html>
+
+"""
+
+
+# ============================================================
+# TEMPLATE DE SUCESSO
+# ============================================================
+
+TEMPLATE_SUCESSO = """
+
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Pedido Enviado - Ágil Mix Jeans Wear
+    </title>
+
+
+    <style>
+
+
+        body {
+            background-color: #172033;
+            color: #E5E7EB;
+            font-family:
+                'Segoe UI',
+                Tahoma,
+                Geneva,
+                Verdana,
+                sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+
+        .card-sucesso {
+            background-color: #1F2A44;
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid #2E3F66;
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.5);
+            max-width: 450px;
+            width: 90%;
+        }
+
+
+        h1 {
+            color: #FACC15;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+
+        p {
+            color: #94A3B8;
+            font-size: 15px;
+            margin-bottom: 25px;
+        }
+
+
+        .btn-zap {
+            background-color: #22C55E;
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+
+        .btn-voltar {
+            background-color: #0F172A;
+            color: #38BDF8;
+            font-weight: bold;
+            border: 1px solid #2E3F66;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="card-sucesso">
+
+
+        <h1>
+            Pedido Registrado com Sucesso! 🎉
+        </h1>
+
+
+        <p>
+            O estoque foi atualizado e seu pedido foi montado.
+            Clique abaixo para enviar para o WhatsApp da loja.
+        </p>
+
+
+        {% if disponivel and link_zap %}
+
+
+        <button
+            id="btnZap"
+            class="btn-zap"
+            onclick="executarWhatsApp()"
+        >
+            💬 Enviar Pedido para o WhatsApp
+        </button>
+
+
+        {% endif %}
+
+
+        <a
+            href="{{ url_for('index') }}"
+            id="btnVoltar"
+            class="btn-voltar"
+        >
+            🔄 Voltar ao Catálogo
+        </a>
+
 
     </div>
 
 
     <script>
 
-        let escalaZoom = 1;
+
+        const link_zap_raw =
+            "{{ link_zap|safe if link_zap else '' }}";
 
 
-        function abrirZoom(src) {
+        function executarWhatsApp() {
 
-            const modal = document.getElementById("modalZoom");
-            const imagem = document.getElementById("imgAmpliada");
 
-            escalaZoom = 1;
+            if (!link_zap_raw) {
+                return;
+            }
 
-            imagem.style.transform = "scale(1)";
-            imagem.src = src;
 
-            /*
-             * Remove qualquer tamanho herdado da miniatura.
-             */
-            imagem.style.width = "auto";
-            imagem.style.height = "auto";
+            fetch(
+                '/consumir_pedido',
+                {
+                    method: 'POST'
+                }
+            );
 
-            modal.style.display = "flex";
-            modal.classList.add("aberto");
 
-            document.body.style.overflow = "hidden";
+            setTimeout(
+                function() {
 
-            /*
-             * Garante que a imagem fique centralizada depois
-             * de carregar.
-             */
-            imagem.onload = function() {
-                imagem.classList.add("ampliada");
-                imagem.style.transform = "scale(1)";
-            };
+                    window.open(
+                        link_zap_raw,
+                        '_blank'
+                    );
+
+                },
+                300
+            );
 
         }
 
-
-        function fecharZoom(event) {
-
-            if (event) {
-                /*
-                 * Só fecha quando o clique foi no fundo do modal
-                 * ou no botão X.
-                 */
-                const alvo = event.target;
-
-                if (
-                    alvo.id !== "modalZoom" &&
-                    !alvo.classList.contains("fechar")
-                ) {
-                    return;
-                }
-            }
-
-            const modal = document.getElementById("modalZoom");
-
-            modal.style.display = "none";
-            modal.classList.remove("aberto");
-
-            document.getElementById("imgAmpliada").src = "";
-
-            document.body.style.overflow = "";
-
-            escalaZoom = 1;
-        }
-
-
-        function alterarZoom(valor) {
-
-            const imagem = document.getElementById("imgAmpliada");
-
-            escalaZoom += valor;
-
-            if (escalaZoom < 0.50) {
-                escalaZoom = 0.50;
-            }
-
-            if (escalaZoom > 3.00) {
-                escalaZoom = 3.00;
-            }
-
-            imagem.style.transform = "scale(" + escalaZoom + ")";
-
-        }
-
-
-        function resetarZoom() {
-
-            escalaZoom = 1;
-
-            document.getElementById("imgAmpliada").style.transform =
-                "scale(1)";
-
-        }
-
-
-        /*
-         * Duplo clique na foto:
-         * aumenta bastante.
-         */
-        document.getElementById("imgAmpliada").addEventListener(
-            "dblclick",
-            function(event) {
-
-                event.stopPropagation();
-
-                if (escalaZoom === 1) {
-                    escalaZoom = 1.8;
-                } else {
-                    escalaZoom = 1;
-                }
-
-                this.style.transform =
-                    "scale(" + escalaZoom + ")";
-
-            }
-        );
-
-
-        /*
-         * Roda do mouse sobre a imagem:
-         * permite ampliar/reduzir.
-         */
-        document.getElementById("imgAmpliada").addEventListener(
-            "wheel",
-            function(event) {
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (event.deltaY < 0) {
-                    alterarZoom(0.15);
-                } else {
-                    alterarZoom(-0.15);
-                }
-
-            },
-            { passive: false }
-        );
-
-
-        /*
-         * ESC fecha a imagem.
-         */
-        document.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (event.key === "Escape") {
-                    fecharZoom();
-                }
-
-            }
-        );
 
     </script>
 
+
 </body>
+
 </html>
+
 """
 
 
+# ============================================================
+# FILTRO JSON
+# ============================================================
+
 @app.template_filter('from_json')
 def from_json_filter(s):
-    try:
-        return json.loads(s)
-    except Exception:
+
+
+    if not s:
         return {}
 
 
-@app.route('/ver_imagem')
-def ver_imagem():
-    caminho = request.args.get('caminho', '')
+    if isinstance(s, dict):
+        return s
 
-    if caminho and os.path.exists(caminho):
-        return send_file(caminho)
 
-    return "", 404
+    try:
 
+        return json.loads(s)
+
+    except Exception:
+
+        return {}
+
+
+# ============================================================
+# LISTAR FOTOS NUMERADAS
+# ============================================================
+
+def listar_fotos_numeradas():
+
+    """
+    Localiza as fotos:
+
+        1.jpg
+        2.jpg
+        3.jpg
+        ...
+        10.bmp
+        11.jpg
+        12.jpg
+        13.jpg
+
+    Retorna um dicionário:
+
+        {
+            1: caminho_da_foto_1,
+            2: caminho_da_foto_2,
+            ...
+        }
+    """
+
+    fotos = {}
+
+
+    if not os.path.isdir(
+        PASTA_PRODUTOS
+    ):
+
+        print()
+        print(
+            '[FOTOS] ERRO: pasta não encontrada:'
+        )
+        print(
+            PASTA_PRODUTOS
+        )
+
+        return fotos
+
+
+    try:
+
+        arquivos = os.listdir(
+            PASTA_PRODUTOS
+        )
+
+    except Exception as erro:
+
+        print(
+            f'[FOTOS] Erro lendo pasta: {erro}'
+        )
+
+        return fotos
+
+
+    for arquivo in arquivos:
+
+
+        nome_base, extensao = os.path.splitext(
+            arquivo
+        )
+
+
+        if (
+            not extensao
+            or
+            extensao.lower()
+            not in EXTENSOES_IMAGEM
+        ):
+            continue
+
+
+        if not nome_base.isdigit():
+            continue
+
+
+        numero = int(
+            nome_base
+        )
+
+
+        caminho = os.path.join(
+            PASTA_PRODUTOS,
+            arquivo
+        )
+
+
+        if os.path.isfile(caminho):
+
+            fotos[numero] = caminho
+
+
+    print()
+    print(
+        '[FOTOS] Fotos numeradas encontradas:'
+    )
+
+
+    for numero in sorted(fotos):
+
+        print(
+            f'   {numero} -> '
+            f'{os.path.basename(fotos[numero])}'
+        )
+
+
+    return fotos
+
+
+# ============================================================
+# VERIFICAR QUAL FOTO CORRESPONDE AO PRODUTO
+# ============================================================
+
+def obter_numero_foto_produto(prod_id):
+
+    """
+    IMPORTANTE:
+
+    Não usamos mais:
+
+        prod_id = número da foto
+
+    Em vez disso, pegamos TODOS os produtos da categoria
+    na mesma ordem em que aparecem no catálogo.
+
+    Exemplo:
+
+        1º produto -> foto 1
+        2º produto -> foto 2
+        3º produto -> foto 3
+        etc.
+
+    Isso resolve o problema dos IDs do banco serem diferentes
+    dos nomes das fotos.
+    """
+
+
+    conn = None
+
+
+    try:
+
+        conn = sqlite3.connect(
+            DB_PATH,
+            timeout=10.0
+        )
+
+
+        cursor = conn.cursor()
+
+
+        cursor.execute(
+            '''
+            SELECT id
+            FROM produtos
+            WHERE grupo LIKE ?
+            ORDER BY nome ASC, id ASC
+            ''',
+            ('%confec%',)
+        )
+
+
+        produtos_ids = [
+            linha[0]
+            for linha in cursor.fetchall()
+        ]
+
+
+    except Exception as erro:
+
+        print(
+            f'[FOTOS] Erro obtendo ordem dos produtos: {erro}'
+        )
+
+        return None
+
+
+    finally:
+
+        if conn:
+
+            conn.close()
+
+
+    try:
+
+        posicao = produtos_ids.index(
+            prod_id
+        )
+
+    except ValueError:
+
+        print(
+            f'[FOTOS] Produto ID {prod_id} não está '
+            f'na lista do catálogo.'
+        )
+
+        return None
+
+
+    numero_foto = posicao + 1
+
+
+    return numero_foto
+
+
+# ============================================================
+# ROTA DA FOTO DO PRODUTO
+# ============================================================
+
+@app.route(
+    '/ver_imagem_id/<int:prod_id>'
+)
+def ver_imagem_id(prod_id):
+
+
+    print()
+    print(
+        '=' * 70
+    )
+
+
+    print(
+        f'[FOTO] Produto ID solicitado: {prod_id}'
+    )
+
+
+    print(
+        f'[FOTO] Pasta de imagens:'
+    )
+
+
+    print(
+        PASTA_PRODUTOS
+    )
+
+
+    # ========================================================
+    # DESCOBRE A POSIÇÃO DO PRODUTO
+    # ========================================================
+
+    numero_foto = obter_numero_foto_produto(
+        prod_id
+    )
+
+
+    if numero_foto is None:
+
+        print(
+            '[FOTO] Não foi possível determinar '
+            'a posição do produto.'
+        )
+
+
+        return '', 404
+
+
+    print(
+        f'[FOTO] Produto está na posição: '
+        f'{numero_foto}'
+    )
+
+
+    # ========================================================
+    # LISTA FOTOS
+    # ========================================================
+
+    fotos = listar_fotos_numeradas()
+
+
+    caminho = fotos.get(
+        numero_foto
+    )
+
+
+    # ========================================================
+    # FOTO ENCONTRADA
+    # ========================================================
+
+    if caminho and os.path.isfile(
+        caminho
+    ):
+
+
+        print(
+            f'[FOTO] ASSOCIAÇÃO CORRETA:'
+        )
+
+
+        print(
+            f'       Produto ID: {prod_id}'
+        )
+
+
+        print(
+            f'       Foto nº: {numero_foto}'
+        )
+
+
+        print(
+            f'       Arquivo: '
+            f'{os.path.basename(caminho)}'
+        )
+
+
+        print(
+            '=' * 70
+        )
+
+
+        try:
+
+            resposta = make_response(
+                send_file(caminho)
+            )
+
+
+            resposta.headers[
+                'Cache-Control'
+            ] = (
+                'no-store, no-cache, '
+                'must-revalidate, max-age=0'
+            )
+
+
+            return resposta
+
+
+        except Exception as erro:
+
+            print(
+                f'[FOTO] Erro enviando foto: {erro}'
+            )
+
+
+            return '', 500
+
+
+    # ========================================================
+    # FOTO NÃO ENCONTRADA
+    # ========================================================
+
+    print(
+        f'[FOTO] FOTO Nº {numero_foto} '
+        f'NÃO ENCONTRADA.'
+    )
+
+
+    print(
+        f'[FOTO] Esperado algum arquivo como:'
+    )
+
+
+    print(
+        f'       {numero_foto}.jpg'
+    )
+
+
+    print(
+        f'       {numero_foto}.jpeg'
+    )
+
+
+    print(
+        f'       {numero_foto}.png'
+    )
+
+
+    print(
+        f'       {numero_foto}.bmp'
+    )
+
+
+    print(
+        '=' * 70
+    )
+
+
+    return '', 404
+
+
+# ============================================================
+# MOSTRUÁRIO
+# ============================================================
+
+@app.route(
+    '/ver_mostruario/<path:nome>'
+)
+def ver_mostruario(nome):
+
+
+    nome = os.path.basename(
+        nome
+    )
+
+
+    caminho_completo = os.path.join(
+        PASTA_MOSTRUARIOS,
+        nome
+    )
+
+
+    if os.path.isfile(
+        caminho_completo
+    ):
+
+
+        resposta = make_response(
+            send_file(
+                caminho_completo
+            )
+        )
+
+
+        resposta.headers[
+            'Cache-Control'
+        ] = (
+            'no-store, no-cache, '
+            'must-revalidate, max-age=0'
+        )
+
+
+        return resposta
+
+
+    return '', 404
+
+
+# ============================================================
+# PÁGINA PRINCIPAL
+# ============================================================
 
 @app.route('/')
 def index():
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
-            id,
-            codigo,
-            nome,
-            descricao,
-            preco,
-            estoque,
-            foto_caminho,
-            preco_custo,
-            estoque_minimo,
-            grupo,
-            referencia,
-            fornecedor,
-            permitir_negativo,
-            grade_json
-        FROM produtos
-        ORDER BY nome ASC
-    """)
+    termo_busca = request.args.get(
+        'busca',
+        ''
+    ).strip()
 
-    produtos = cursor.fetchall()
 
-    conn.close()
+    # ========================================================
+    # MOSTRUÁRIOS
+    # ========================================================
 
-    return render_template_string(
-        TEMPLATE_HTML,
-        produtos=produtos
+    mostruarios = []
+
+
+    if os.path.isdir(
+        PASTA_MOSTRUARIOS
+    ):
+
+
+        mostruarios = [
+
+            f
+
+            for f in os.listdir(
+                PASTA_MOSTRUARIOS
+            )
+
+            if f.lower().endswith(
+                (
+                    '.png',
+                    '.jpg',
+                    '.jpeg',
+                    '.webp',
+                    '.gif'
+                )
+            )
+
+        ]
+
+
+        mostruarios.sort(
+            key=lambda x: x.lower()
+        )
+
+
+    # ========================================================
+    # BANCO
+    # ========================================================
+
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=10.0
     )
 
 
-@app.route('/enviar_pedido', methods=['POST'])
-def enviar_pedido():
+    conn.execute(
+        'PRAGMA journal_mode=WAL;'
+    )
 
-    nome = request.form.get('cliente_nome', 'Cliente')
-    tel = request.form.get('cliente_tel', '')
 
-    itens_pedido = []
-    total_geral = 0.0
-
-    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    for chave, value in request.form.items():
 
-        if chave.startswith('item_'):
+    try:
 
-            qtd = int(value) if value.isdigit() else 0
 
-            if qtd > 0:
+        # ====================================================
+        # BUSCA
+        # ====================================================
 
-                partes = chave.split('_')
+        if termo_busca:
 
-                prod_id = partes[1]
-                tamanho = partes[2]
 
-                cursor.execute(
-                    "SELECT nome, preco FROM produtos WHERE id = ?",
-                    (prod_id,)
+            palavras = termo_busca.split()
+
+
+            condicoes = []
+
+
+            parametros = [
+                '%confec%'
+            ]
+
+
+            for palavra in palavras:
+
+
+                condicoes.append(
+                    '''
+                    (
+                        referencia LIKE ?
+                        OR nome LIKE ?
+                        OR codigo LIKE ?
+                        OR descricao LIKE ?
+                    )
+                    '''
                 )
 
-                p = cursor.fetchone()
 
-                if p:
+                p_like = (
+                    f'%{palavra}%'
+                )
 
-                    nome_prod, preco = p[0], p[1]
 
-                    subtotal = qtd * preco
-                    total_geral += subtotal
+                parametros.extend(
+                    [
+                        p_like,
+                        p_like,
+                        p_like,
+                        p_like
+                    ]
+                )
 
-                    itens_pedido.append(
-                        f"• {qtd}x {nome_prod} "
-                        f"(Tam: {tamanho}) - R$ {subtotal:.2f}"
-                        .replace('.', ',')
+
+            sql_where = (
+                'WHERE grupo LIKE ? AND ('
+                +
+                ' OR '.join(
+                    condicoes
+                )
+                +
+                ')'
+            )
+
+
+            query = f'''
+                SELECT
+                    id,
+                    codigo,
+                    nome,
+                    descricao,
+                    preco,
+                    estoque,
+                    foto_caminho,
+                    preco_custo,
+                    estoque_minimo,
+                    grupo,
+                    referencia,
+                    fornecedor,
+                    permitir_negativo,
+                    grade_json
+                FROM produtos
+                {sql_where}
+                ORDER BY nome ASC, id ASC
+            '''
+
+
+            cursor.execute(
+                query,
+                parametros
+            )
+
+
+        # ====================================================
+        # TODOS
+        # ====================================================
+
+        else:
+
+
+            query = '''
+                SELECT
+                    id,
+                    codigo,
+                    nome,
+                    descricao,
+                    preco,
+                    estoque,
+                    foto_caminho,
+                    preco_custo,
+                    estoque_minimo,
+                    grupo,
+                    referencia,
+                    fornecedor,
+                    permitir_negativo,
+                    grade_json
+                FROM produtos
+                WHERE grupo LIKE ?
+                ORDER BY nome ASC, id ASC
+            '''
+
+
+            cursor.execute(
+                query,
+                ('%confec%',)
+            )
+
+
+        produtos_originais = cursor.fetchall()
+
+
+    finally:
+
+        conn.close()
+
+
+    # ========================================================
+    # PREPARA A NUMERAÇÃO DAS FOTOS
+    # ========================================================
+
+    # Para cada produto mostrado, acrescentamos:
+    #
+    # p[14] = número da foto
+    #
+    # Assim:
+    #
+    # p[14] = 1
+    # p[14] = 2
+    # p[14] = 3
+    # ...
+    #
+    # ou None quando não existir foto.
+
+
+    produtos = []
+
+
+    # Primeiro precisamos da lista GLOBAL de produtos
+    # para que uma busca não mude a associação das fotos.
+
+
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=10.0
+    )
+
+
+    cursor = conn.cursor()
+
+
+    try:
+
+
+        cursor.execute(
+            '''
+            SELECT id
+            FROM produtos
+            WHERE grupo LIKE ?
+            ORDER BY nome ASC, id ASC
+            ''',
+            ('%confec%',)
+        )
+
+
+        ids_ordem = [
+            linha[0]
+            for linha in cursor.fetchall()
+        ]
+
+
+    finally:
+
+        conn.close()
+
+
+    mapa_fotos = {}
+
+
+    for indice, id_produto in enumerate(
+        ids_ordem,
+        start=1
+    ):
+
+        mapa_fotos[
+            id_produto
+        ] = indice
+
+
+    # ========================================================
+    # VERIFICA QUAIS FOTOS REALMENTE EXISTEM
+    # ========================================================
+
+    fotos_existentes = listar_fotos_numeradas()
+
+
+    # ========================================================
+    # ADICIONA O NÚMERO DA FOTO
+    # ========================================================
+
+    for produto in produtos_originais:
+
+
+        prod_id = produto[0]
+
+
+        numero_foto = mapa_fotos.get(
+            prod_id
+        )
+
+
+        # Só informa foto se o arquivo existir
+        if numero_foto in fotos_existentes:
+
+            numero_foto_final = numero_foto
+
+        else:
+
+            numero_foto_final = None
+
+
+        produto_novo = (
+            produto
+            +
+            (numero_foto_final,)
+        )
+
+
+        produtos.append(
+            produto_novo
+        )
+
+
+        print(
+            f'[CATALOGO] '
+            f'ID={prod_id} '
+            f'posição={numero_foto} '
+            f'foto={numero_foto_final}'
+        )
+
+
+    # ========================================================
+    # RENDERIZA
+    # ========================================================
+
+    return render_template_string(
+
+        TEMPLATE_HTML,
+
+        produtos=produtos,
+
+        mostruarios=mostruarios,
+
+        termo_busca=termo_busca
+
+    )
+
+
+# ============================================================
+# ENVIAR PEDIDO
+# ============================================================
+
+@app.route(
+    '/enviar_pedido',
+    methods=['POST']
+)
+def enviar_pedido():
+
+
+    nome = request.form.get(
+        'cliente_nome',
+        'Cliente'
+    )
+
+
+    tel = request.form.get(
+        'cliente_tel',
+        ''
+    )
+
+
+    itens_pedido = []
+
+
+    total_geral = 0.0
+
+
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=10.0
+    )
+
+
+    conn.execute(
+        'PRAGMA journal_mode=WAL;'
+    )
+
+
+    cursor = conn.cursor()
+
+
+    try:
+
+
+        # ====================================================
+        # CONTAS A RECEBER
+        # ====================================================
+
+        cursor.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS contas_receber (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                cliente TEXT NOT NULL,
+
+                telefone TEXT,
+
+                valor REAL NOT NULL,
+
+                data TEXT NOT NULL,
+
+                status TEXT DEFAULT 'PENDENTE'
+
+            )
+            '''
+        )
+
+
+        # ====================================================
+        # ITENS
+        # ====================================================
+
+        for chave, value in request.form.items():
+
+
+            if not chave.startswith(
+                'item_'
+            ):
+
+                continue
+
+
+            qtd = (
+                int(value)
+                if value.isdigit()
+                else 0
+            )
+
+
+            if qtd <= 0:
+
+                continue
+
+
+            partes = chave.split(
+                '_'
+            )
+
+
+            if len(partes) < 3:
+
+                continue
+
+
+            prod_id = partes[1]
+
+
+            tamanho = '_'.join(
+                partes[2:]
+            )
+
+
+            cursor.execute(
+                '''
+                SELECT
+                    nome,
+                    preco,
+                    estoque,
+                    grade_json,
+                    referencia
+                FROM produtos
+                WHERE id = ?
+                ''',
+                (prod_id,)
+            )
+
+
+            p = cursor.fetchone()
+
+
+            if not p:
+
+                continue
+
+
+            (
+                nome_prod,
+                preco,
+                estoque_geral,
+                grade_json_str,
+                referencia
+            ) = p
+
+
+            subtotal = (
+                qtd * preco
+            )
+
+
+            total_geral += subtotal
+
+
+            ref_texto = (
+
+                f' (Ref: {referencia})'
+
+                if referencia
+
+                else ''
+
+            )
+
+
+            itens_pedido.append(
+
+                f'• {qtd}x '
+                f'{nome_prod}'
+                f'{ref_texto} '
+                f'(Tam: {tamanho}) '
+                f'- R$ '
+                f'{subtotal:.2f}'
+                .replace('.', ',')
+
+            )
+
+
+            # ================================================
+            # GRADE
+            # ================================================
+
+            try:
+
+                grade_dict = (
+
+                    json.loads(
+                        grade_json_str
                     )
 
-    conn.close()
+                    if grade_json_str
 
-    if not itens_pedido:
+                    else {}
 
-        return """
-        <script>
-            alert('Selecione pelo menos um item na grade!');
-            window.history.back();
-        </script>
-        """
+                )
+
+            except Exception:
+
+                grade_dict = {}
+
+
+            atual_tam = float(
+                grade_dict.get(
+                    tamanho,
+                    0.0
+                )
+            )
+
+
+            novo_tam = max(
+                0.0,
+                atual_tam - qtd
+            )
+
+
+            grade_dict[tamanho] = (
+
+                int(novo_tam)
+
+                if novo_tam.is_integer()
+
+                else novo_tam
+
+            )
+
+
+            # ================================================
+            # ESTOQUE GERAL
+            # ================================================
+
+            novo_est_geral = max(
+
+                0.0,
+
+                float(
+                    estoque_geral or 0
+                )
+                -
+                qtd
+
+            )
+
+
+            cursor.execute(
+                '''
+                UPDATE produtos
+
+                SET
+                    estoque = ?,
+                    grade_json = ?
+
+                WHERE id = ?
+                ''',
+                (
+                    novo_est_geral,
+                    json.dumps(
+                        grade_dict,
+                        ensure_ascii=False
+                    ),
+                    prod_id
+                )
+            )
+
+
+        # ====================================================
+        # NENHUM ITEM
+        # ====================================================
+
+        if not itens_pedido:
+
+
+            return (
+
+                "<script>"
+                "alert("
+                "'Selecione pelo menos um item na grade!'"
+                ");"
+                "window.history.back();"
+                "</script>"
+
+            )
+
+
+        # ====================================================
+        # REGISTRA CONTA
+        # ====================================================
+
+        data_atual = datetime.now().strftime(
+            '%d/%m/%Y %H:%M'
+        )
+
+
+        cursor.execute(
+            '''
+            INSERT INTO contas_receber
+            (
+                cliente,
+                telefone,
+                valor,
+                data,
+                status
+            )
+            VALUES
+            (
+                ?,
+                ?,
+                ?,
+                ?,
+                'PENDENTE'
+            )
+            ''',
+            (
+                nome,
+                tel,
+                total_geral,
+                data_atual
+            )
+        )
+
+
+        conn.commit()
+
+
+    finally:
+
+        conn.close()
+
+
+    # ========================================================
+    # WHATSAPP
+    # ========================================================
 
     msg = (
-        f"Olá! Meu nome é *{nome}* "
-        f"e gostaria de fechar este pedido:\\n\\n"
+
+        f'Olá! Meu nome é *{nome}* '
+        f'(WhatsApp: {tel}) '
+        f'e gostaria de fechar este pedido:\n\n'
+
+        +
+
+        '\n'.join(
+            itens_pedido
+        )
+
+        +
+
+        f'\n\n*Valor Total:* '
+        f'R$ {total_geral:.2f}'
+        .replace('.', ',')
+
     )
 
-    msg += "\\n".join(itens_pedido)
 
     msg += (
-        f"\\n\\n*Valor Total:* "
-        f"R$ {total_geral:.2f}".replace('.', ',')
+        '\nAguardando instruções '
+        'de pagamento e entrega.'
     )
 
-    msg += "\\nAguardando instruções de pagamento e entrega."
+
+    import urllib.parse
+
 
     link_zap = (
-        f"https://api.whatsapp.com/send"
-        f"?phone={WHATSAPP_LOJA}"
-        f"&text={urllib.parse.quote(msg)}"
+
+        'https://web.whatsapp.com/send'
+        f'?phone={WHATSAPP_LOJA}'
+        f'&text='
+        f'{urllib.parse.quote(msg)}'
+
     )
 
-    return redirect(link_zap)
 
+    session[
+        'link_zap'
+    ] = link_zap
+
+
+    session[
+        'disponivel'
+    ] = True
+
+
+    return redirect(
+        url_for('sucesso')
+    )
+
+
+# ============================================================
+# SUCESSO
+# ============================================================
+
+@app.route('/sucesso')
+def sucesso():
+
+
+    return render_template_string(
+
+        TEMPLATE_SUCESSO,
+
+        link_zap=session.get(
+            'link_zap',
+            ''
+        ),
+
+        disponivel=session.get(
+            'disponivel',
+            False
+        )
+
+    )
+
+
+# ============================================================
+# CONSUMIR PEDIDO
+# ============================================================
+
+@app.route(
+    '/consumir_pedido',
+    methods=['POST']
+)
+def consumir_pedido():
+
+
+    session[
+        'disponivel'
+    ] = False
+
+
+    session[
+        'link_zap'
+    ] = ''
+
+
+    return '', 204
+
+
+# ============================================================
+# INICIAR SERVIDOR
+# ============================================================
 
 if __name__ == '__main__':
 
+
+    print()
     print(
-        "Servidor do Catálogo Online rodando em "
-        "http://127.0.0.1:5000"
+        '=' * 70
     )
+
+
+    print(
+        '       ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE'
+    )
+
+
+    print(
+        '=' * 70
+    )
+
+
+    print()
+    print(
+        'BASE DO PROGRAMA:'
+    )
+    print(
+        BASE_DIR
+    )
+
+
+    print()
+    print(
+        'BANCO DE DADOS:'
+    )
+    print(
+        DB_PATH
+    )
+
+
+    print()
+    print(
+        'PASTA DE PRODUTOS:'
+    )
+    print(
+        PASTA_PRODUTOS
+    )
+
+
+    print()
+    print(
+        'PASTA DE MOSTRUÁRIOS:'
+    )
+    print(
+        PASTA_MOSTRUARIOS
+    )
+
+
+    # ========================================================
+    # TESTES
+    # ========================================================
+
+    print()
+
+
+    if os.path.isfile(
+        DB_PATH
+    ):
+
+        print(
+            '[OK] Banco de dados encontrado.'
+        )
+
+    else:
+
+        print(
+            '[ERRO] Banco de dados NÃO encontrado!'
+        )
+
+
+    if os.path.isdir(
+        PASTA_PRODUTOS
+    ):
+
+        fotos = listar_fotos_numeradas()
+
+
+        print()
+        print(
+            f'[OK] Pasta de produtos encontrada.'
+        )
+
+
+        print(
+            f'[OK] {len(fotos)} fotos numeradas encontradas.'
+        )
+
+
+    else:
+
+        print(
+            '[ERRO] Pasta de produtos NÃO encontrada!'
+        )
+
+
+    print()
+    print(
+        'Servidor iniciando em:'
+    )
+
+
+    print(
+        'http://localhost:5000'
+    )
+
+
+    print()
+    print(
+        '=' * 70
+    )
+
+
+    print()
+
 
     app.run(
         host='0.0.0.0',
