@@ -20,7 +20,7 @@ DB_PATH = 'dalvan.db'
 # >>> WHATSAPP DA EMPRESA <<<
 WHATSAPP_LOJA = '5581996716172'
 
-# Caminho relativo da pasta de mostruários para funcionar no Render
+# Caminho relativo da pasta de mostruários
 PASTA_MOSTRUARIOS = os.path.join('imagens', 'mostruarios')
 
 TEMPLATE_HTML = """
@@ -322,15 +322,15 @@ def ver_imagem():
   if not caminho:
     return '', 404
 
-  # Se o caminho salvo no banco vier absoluto (ex: C:\Agil Mix\imagens\produtos\foto.jpg),
-  # extrai apenas o nome do arquivo e busca na pasta local 'imagens/produtos/'
-  if 'C:\\' in caminho or 'C:/' in caminho or os.path.isabs(caminho):
-    nome_arquivo = os.path.basename(caminho)
-    caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
-    if os.path.exists(caminho_local):
-      return send_file(caminho_local)
+  # Extrai apenas o nome do arquivo da imagem, ignorando caminhos absolutos do Windows ou locais
+  nome_arquivo = os.path.basename(caminho)
 
-  # Caso contrário, tenta abrir diretamente o caminho informado
+  # Procura o arquivo na pasta relativa de produtos no servidor
+  caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
+  if os.path.exists(caminho_local):
+    return send_file(caminho_local)
+
+  # Fallback: tenta buscar diretamente caso seja um caminho relativo válido
   if os.path.exists(caminho):
     return send_file(caminho)
 
