@@ -249,7 +249,7 @@ TEMPLATE_SUCESSO = """
 </head>
 <body>
     <div class="card-sucesso">
-        <h1>Pedido Registrado com Successo! 🎉</h1>
+        <h1>Pedido Registrado com Sucesso! 🎉</h1>
         <p>O estoque foi atualizado e seu pedido foi montado. Clique abaixo para enviar para o WhatsApp da loja.</p>
         {% if disponivel and link_zap %}
         <button id="btnZap" class="btn-zap" onclick="executarWhatsApp()">💬 Enviar Pedido para o WhatsApp</button>
@@ -286,33 +286,39 @@ def ver_imagem():
   codigo = request.args.get('codigo', '').strip()
   ref = request.args.get('ref', '').strip()
 
-  pasta_produtos = os.path.join('imagens', 'produtos')
-  if not os.path.exists(pasta_produtos):
-    return '', 404
+  # Varre tanto a pasta raiz de produtos quanto a subpasta 'confeccoes'
+  pastas_para_buscar = [
+      os.path.join('imagens', 'produtos'),
+      os.path.join('imagens', 'produtos', 'confeccoes'),
+  ]
 
-  arquivos = os.listdir(pasta_produtos)
+  todos_arquivos = []
+  for p_dir in pastas_para_buscar:
+    if os.path.exists(p_dir):
+      for f in os.listdir(p_dir):
+        todos_arquivos.append((os.path.join(p_dir, f), f))
 
-  # 1. Tenta achar exato pelo código (ex: 321564987)
-  for f in arquivos:
-    nome_sem_ext, _ = os.path.splitext(f)
+  # 1. Procura exato pelo código no nome do arquivo
+  for caminho_completo, nome_arquivo in todos_arquivos:
+    nome_sem_ext, _ = os.path.splitext(nome_arquivo)
     if codigo and nome_sem_ext.strip().lower() == codigo.lower():
-      return send_file(os.path.join(pasta_produtos, f))
+      return send_file(caminho_completo)
 
-  # 2. Tenta achar exato pela referência (ex: B640)
-  for f in arquivos:
-    nome_sem_ext, _ = os.path.splitext(f)
+  # 2. Procura exato pela referência no nome do arquivo
+  for caminho_completo, nome_arquivo in todos_arquivos:
+    nome_sem_ext, _ = os.path.splitext(nome_arquivo)
     if ref and nome_sem_ext.strip().lower() == ref.lower():
-      return send_file(os.path.join(pasta_produtos, f))
+      return send_file(caminho_completo)
 
-  # 3. Tenta achar se a referência está contida no nome do arquivo (ex: B640 dentro de B640.jpeg)
-  for f in arquivos:
-    if ref and ref.lower() in f.lower():
-      return send_file(os.path.join(pasta_produtos, f))
+  # 3. Procura se a referência está contida no nome do arquivo
+  for caminho_completo, nome_arquivo in todos_arquivos:
+    if ref and ref.lower() in nome_arquivo.lower():
+      return send_file(caminho_completo)
 
-  # 4. Tenta achar se o código está contido no nome do arquivo
-  for f in arquivos:
-    if codigo and codigo in f:
-      return send_file(os.path.join(pasta_produtos, f))
+  # 4. Procura se o código está contido no nome do arquivo
+  for caminho_completo, nome_arquivo in todos_arquivos:
+    if codigo and codigo in nome_arquivo:
+      return send_file(caminho_completo)
 
   return '', 404
 
@@ -491,7 +497,7 @@ def sucesso():
   )
 
 
-@app.route('/consumir_pedido', methods=['POST'])
+@app.route('/consumir_pedido', methodologies=['POST'] if False else ['POST'])
 def consumir_pedido():
   session['disponivel'] = False
   session['link_zap'] = ''
