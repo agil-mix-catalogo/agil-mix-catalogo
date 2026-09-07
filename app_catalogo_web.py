@@ -288,12 +288,28 @@ def ver_imagem_id(prod_id):
   if not os.path.exists(pasta_produtos):
     return '', 404
 
+  # Descobre o código exato (ex: 321564987) do produto no banco de dados
+  conn = sqlite3.connect(DB_PATH, timeout=5.0)
+  cursor = conn.cursor()
+  cursor.execute('SELECT codigo FROM produtos WHERE id = ?', (prod_id,))
+  res = cursor.fetchone()
+  conn.close()
+
+  codigo_prod = str(res[0]).strip() if res and res[0] else ''
+
+  # Procura na pasta se o nome do arquivo bate com o ID numérico ou com o código exato
   for arquivo in os.listdir(pasta_produtos):
     nome_sem_ext, _ = os.path.splitext(arquivo)
-    if nome_sem_ext.strip() == str(prod_id):
+    nome_limpo = nome_sem_ext.strip()
+
+    if nome_limpo == str(prod_id) or (
+        codigo_prod and nome_limpo.lower() == codigo_prod.lower()
+    ):
       caminho = os.path.join(pasta_produtos, arquivo)
       response = make_response(send_file(caminho))
-      response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+      response.headers['Cache-Control'] = (
+          'no-store, no-cache, must-revalidate, max-age=0'
+      )
       return response
 
   return '', 404
@@ -304,7 +320,9 @@ def ver_mostruario(nome):
   caminho_completo = os.path.join(PASTA_MOSTRUARIOS, nome)
   if os.path.exists(caminho_completo):
     response = make_response(send_file(caminho_completo))
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Cache-Control'] = (
+        'no-store, no-cache, must-revalidate, max-age=0'
+    )
     return response
   return '', 404
 
