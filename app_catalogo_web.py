@@ -134,14 +134,11 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {% if p[6] and p[6] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[6]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[6]) }}')" title="Frente (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
+                        {# Passamos o código do produto (p[1]) para garantir a foto correta #}
+                        {% if p[1] %}
+                        <img src="{{ url_for('ver_imagem', codigo=p[1]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', codigo=p[1]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
                         <div class="prod-img-grande">Sem Foto</div>
-                        {% endif %}
-
-                        {% if p[14] is defined and p[14] and p[14] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[14]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[14]) }}')" title="Costas (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% endif %}
                     </div>
 
@@ -285,33 +282,22 @@ def from_json_filter(s):
     return {}
 
 
-@app.route('/ver_imagem')
-def ver_imagem():
-  caminho = request.args.get('caminho', '').strip()
-  if not caminho:
+@app.route('/ver_imagem/<codigo>')
+def ver_imagem(codigo):
+  pasta_produtos = os.path.join('imagens', 'produtos')
+  if not os.path.exists(pasta_produtos):
     return '', 404
 
-  pasta_produtos = os.path.join('imagens', 'produtos')
+  # Procura na pasta de produtos por qualquer arquivo cujo nome comece com o código exato do produto (ex: '321564987')
+  for f in os.listdir(pasta_produtos):
+    nome_sem_ext, _ = os.path.splitext(f)
+    if nome_sem_ext.strip().lower() == str(codigo).strip().lower():
+      return send_file(os.path.join(pasta_produtos, f))
 
-  # Extrai o código exato do produto (sequência numérica) de dentro do caminho corrompido do Windows
-  import re
-
-  match = re.search(r'(\d+)(?:\.jpeg|\.jpg|\.png|\.webp|\.gif)', caminho, re.IGNORECASE)
-  if match:
-    codigo_produto = match.group(1)
-    if os.path.exists(pasta_produtos):
-      for f in os.listdir(pasta_produtos):
-        if f.lower().startswith(codigo_produto.lower()):
-          return send_file(os.path.join(pasta_produtos, f))
-
-  # Fallback caso encontre o nome exato do arquivo
-  nome_arquivo = os.path.basename(caminho.replace('\\', '/'))
-  caminho_local = os.path.join(pasta_produtos, nome_arquivo)
-  if os.path.exists(caminho_local):
-    return send_file(caminho_local)
-
-  if os.path.exists(caminho):
-    return send_file(caminho)
+  # Segunda tentativa: verifica se o código está contido no nome do arquivo
+  for f in os.listdir(pasta_produtos):
+    if str(codigo).strip() in f:
+      return send_file(os.path.join(pasta_produtos, f))
 
   return '', 404
 
