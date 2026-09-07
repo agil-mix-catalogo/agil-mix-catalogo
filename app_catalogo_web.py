@@ -20,8 +20,8 @@ DB_PATH = 'dalvan.db'
 # >>> WHATSAPP DA EMPRESA <<<
 WHATSAPP_LOJA = '5581996716172'
 
-# Caminho da pasta de mostruários conforme a imagem
-PASTA_MOSTRUARIOS = r'C:\Agil Mix\imagens\mostruarios'
+# Caminho relativo da pasta de mostruários para funcionar no Render
+PASTA_MOSTRUARIOS = os.path.join('imagens', 'mostruarios')
 
 TEMPLATE_HTML = """
 <!DOCTYPE html>
@@ -290,13 +290,10 @@ TEMPLATE_SUCESSO = """
             btnZap.innerHTML = '✔ Abrindo WhatsApp...';
             btnZap.classList.add('clicado');
 
-            // Libera o botão de voltar ao catálogo imediatamente
             btnVoltar.classList.add('liberado');
 
-            // Consome o pedido na sessão para evitar reenvios
             fetch('/consumir_pedido', { method: 'POST' });
 
-            // Abre direto no chat limpo do WhatsApp Web
             setTimeout(function() {
                 window.open(link_zap_raw, '_blank');
             }, 300);
@@ -322,8 +319,21 @@ def from_json_filter(s):
 @app.route('/ver_imagem')
 def ver_imagem():
   caminho = request.args.get('caminho', '')
-  if caminho and os.path.exists(caminho):
+  if not caminho:
+    return '', 404
+
+  # Se o caminho salvo no banco vier absoluto (ex: C:\Agil Mix\imagens\produtos\foto.jpg),
+  # extrai apenas o nome do arquivo e busca na pasta local 'imagens/produtos/'
+  if 'C:\\' in caminho or 'C:/' in caminho or os.path.isabs(caminho):
+    nome_arquivo = os.path.basename(caminho)
+    caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
+    if os.path.exists(caminho_local):
+      return send_file(caminho_local)
+
+  # Caso contrário, tenta abrir diretamente o caminho informado
+  if os.path.exists(caminho):
     return send_file(caminho)
+
   return '', 404
 
 
@@ -413,7 +423,6 @@ def enviar_pedido():
   cursor = conn.cursor()
 
   try:
-    # Garante a criação da tabela e adiciona automaticamente qualquer coluna que esteja faltando
     cursor.execute("""
             CREATE TABLE IF NOT EXISTS contas_receber (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -425,7 +434,6 @@ def enviar_pedido():
             )
         """)
 
-    # Verifica e adiciona colunas caso a tabela já exista de uma versão antiga
     colunas_existentes = [
         col[1] for col in cursor.execute('PRAGMA table_info(contas_receber)')
     ]
@@ -494,7 +502,6 @@ def enviar_pedido():
           " grade!'); window.history.back();</script>"
       )
 
-    # Lança automaticamente o registro em Contas a Receber
     data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
     cursor.execute(
         """
