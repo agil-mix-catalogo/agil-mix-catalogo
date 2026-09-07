@@ -135,13 +135,13 @@ TEMPLATE_HTML = """
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
                         {% if p[6] and p[6] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[6]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[6]) }}')" title="Frente (Ampliar)" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('div'), {className: 'prod-img-grande', innerText: 'Erro: ' + '{{ p[6] }}'}));">
+                        <img src="{{ url_for('ver_imagem', caminho=p[6]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[6]) }}')" title="Frente (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
                         <div class="prod-img-grande">Sem Foto</div>
                         {% endif %}
 
                         {% if p[14] is defined and p[14] and p[14] != '' %}
-                        <img src="{{ url_for('ver_imagem', caminho=p[14]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[14]) }}')" title="Costas (Ampliar)" onerror="this.onerror=null; this.replaceWith(Object.assign(document.createElement('div'), {className: 'prod-img-grande', innerText: 'Erro: ' + '{{ p[14] }}'}));">
+                        <img src="{{ url_for('ver_imagem', caminho=p[14]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', caminho=p[14]) }}')" title="Costas (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% endif %}
                     </div>
 
@@ -291,13 +291,37 @@ def ver_imagem():
   if not caminho:
     return '', 404
 
-  # Tenta buscar pelo nome exato do arquivo na pasta de produtos
-  nome_arquivo = os.path.basename(caminho)
+  # Limpa o caminho removendo referências absolutas ou corrompidas do Windows
+  # Substitui barras invertidas por normais para garantir consistência
+  caminho_limpo = caminho.replace('\\', '/')
+
+  # Pega apenas o nome do arquivo se houver qualquer barra
+  if '/' in caminho_limpo:
+    nome_arquivo = caminho_limpo.split('/')[-1]
+  else:
+    # Caso venha grudado sem barra (ex: C:Sistema Agilimagensprodutos321564987.jpeg)
+    # Procura a extensão e extrai os últimos caracteres do nome do arquivo
+    nome_arquivo = os.path.basename(caminho)
+    for ext in ['.jpeg', '.jpg', '.png', '.webp', '.gif']:
+      if ext in caminho.lower():
+        idx = caminho.lower().rfind(ext)
+        # Pega um pedaço seguro para trás para formar o nome do arquivo
+        trecho = caminho[: idx + len(ext)]
+        nome_arquivo = os.path.basename(trecho.replace('\\', '/'))
+        break
+
+  # Procura o arquivo na pasta correta do servidor
   caminho_local = os.path.join('imagens', 'produtos', nome_arquivo)
   if os.path.exists(caminho_local):
     return send_file(caminho_local)
 
-  # Tenta procurar caso o caminho passado seja relativo direto
+  # Segunda tentativa: varre a pasta de produtos procurando pelo nome exato caso o parse falhe
+  pasta_produtos = os.path.join('imagens', 'produtos')
+  if os.path.exists(pasta_produtos):
+    for f in os.listdir(pasta_produtos):
+      if f.lower() == nome_arquivo.lower():
+        return send_file(os.path.join(pasta_produtos, f))
+
   if os.path.exists(caminho):
     return send_file(caminho)
 
