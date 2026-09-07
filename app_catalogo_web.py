@@ -5,7 +5,10 @@
 
 import json
 import os
+import re
 import sqlite3
+import urllib.parse
+
 from datetime import datetime
 
 from flask import (
@@ -30,7 +33,7 @@ app.secret_key = 'dalvan_secret_key_2026'
 
 
 # ============================================================
-# CAMINHOS ABSOLUTOS
+# CAMINHOS
 # ============================================================
 
 BASE_DIR = os.path.dirname(
@@ -70,7 +73,7 @@ WHATSAPP_LOJA = '5581996716172'
 
 
 # ============================================================
-# EXTENSÕES DE IMAGEM
+# EXTENSÕES
 # ============================================================
 
 EXTENSOES_IMAGEM = (
@@ -115,16 +118,22 @@ TEMPLATE_HTML = """
 
 
         body {
+
             background-color: #172033;
+
             color: #E5E7EB;
+
             font-family:
                 'Segoe UI',
                 Tahoma,
                 Geneva,
                 Verdana,
                 sans-serif;
+
             margin: 0;
+
             padding: 0;
+
         }
 
 
@@ -133,24 +142,37 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         header {
+
             background-color: #1F2A44;
+
             padding: 20px;
+
             text-align: center;
+
             border-bottom: 2px solid #2563EB;
+
         }
 
 
         h1 {
+
             margin: 0;
+
             color: #FACC15;
+
             font-size: 24px;
+
         }
 
 
         p {
+
             color: #94A3B8;
+
             font-size: 14px;
+
             margin: 5px 0 0 0;
+
         }
 
 
@@ -159,109 +181,202 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .slider-container {
+
             max-width: 900px;
+
             margin: 20px auto;
+
             position: relative;
+
             border-radius: 12px;
+
             overflow: hidden;
+
             box-shadow:
                 0 4px 15px rgba(0,0,0,0.5);
+
             border: 1px solid #2E3F66;
+
             background-color: #1F2A44;
+
         }
 
 
         .slider-track {
+
             display: flex;
+
+            width: 100%;
+
             transition:
                 transform 0.5s ease-in-out;
+
         }
 
 
         .slide {
+
             min-width: 100%;
-            box-sizing: border-box;
+
+            width: 100%;
+
             position: relative;
+
+            overflow: hidden;
+
         }
 
 
         .slide img {
+
             width: 100%;
+
             height: 350px;
+
             object-fit: cover;
+
             display: block;
+
+            cursor: pointer;
+
+            background-color: #0F172A;
+
         }
 
 
         .slide-legenda {
+
             position: absolute;
+
             bottom: 0;
+
             left: 0;
+
             right: 0;
+
             background:
                 rgba(15, 23, 42, 0.85);
+
             color: #FACC15;
-            padding: 10px;
+
+            padding: 12px;
+
             text-align: center;
+
             font-size: 15px;
+
             font-weight: bold;
+
             border-top: 1px solid #2E3F66;
+
         }
 
 
         .slider-btn {
+
             position: absolute;
+
             top: 50%;
+
             transform: translateY(-50%);
+
             background-color:
-                rgba(15, 23, 42, 0.7);
+                rgba(15, 23, 42, 0.75);
+
             color: #FFF;
+
             border: none;
-            padding: 12px;
+
+            width: 45px;
+
+            height: 45px;
+
             cursor: pointer;
-            font-size: 18px;
+
+            font-size: 24px;
+
             border-radius: 50%;
-            transition: background 0.2s;
+
+            transition:
+                background-color 0.2s,
+                transform 0.2s;
+
             z-index: 10;
+
         }
 
 
         .slider-btn:hover {
+
             background-color: #2563EB;
+
+            transform:
+                translateY(-50%) scale(1.08);
+
         }
 
 
         .slider-prev {
+
             left: 15px;
+
         }
 
 
         .slider-next {
+
             right: 15px;
+
         }
 
 
         .slider-dots {
+
             text-align: center;
+
             padding: 10px;
+
             background: #1F2A44;
+
         }
 
 
         .dot {
+
             display: inline-block;
+
             height: 10px;
+
             width: 10px;
+
             margin: 0 4px;
+
             background-color: #475569;
+
             border-radius: 50%;
+
             cursor: pointer;
-            transition: background 0.3s;
+
+            transition:
+                background-color 0.3s,
+                transform 0.2s;
+
+        }
+
+
+        .dot:hover {
+
+            transform: scale(1.2);
+
         }
 
 
         .dot.active {
+
             background-color: #FACC15;
+
+            transform: scale(1.15);
+
         }
 
 
@@ -270,9 +385,13 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .container {
+
             max-width: 900px;
+
             margin: 20px auto;
+
             padding: 10px;
+
         }
 
 
@@ -281,76 +400,133 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .search-container {
+
             background-color: #1F2A44;
+
             padding: 15px;
+
             border-radius: 12px;
+
             margin-bottom: 20px;
+
             border: 1px solid #2E3F66;
+
             display: flex;
+
             gap: 10px;
+
             flex-direction: column;
+
         }
 
 
         .search-row {
+
             display: flex;
+
             gap: 10px;
+
             width: 100%;
+
         }
 
 
         .search-container input {
+
             flex-grow: 1;
+
             padding: 10px 15px;
+
             border-radius: 6px;
+
             border: 1px solid #2E3F66;
+
             background-color: #0F172A;
+
             color: #FFF;
+
             font-size: 14px;
+
             outline: none;
+
+        }
+
+
+        .search-container input:focus {
+
+            border-color: #2563EB;
+
         }
 
 
         .search-container button {
+
             background-color: #2563EB;
+
             color: #FFF;
+
             font-weight: bold;
+
             border: none;
+
             padding: 10px 20px;
+
             border-radius: 6px;
+
             cursor: pointer;
+
             font-size: 14px;
+
         }
 
 
         .search-container button:hover {
+
             background-color: #1d4ed8;
+
         }
 
 
         .btn-limpar {
+
             background-color: #475569 !important;
+
             text-decoration: none;
+
             display: flex;
+
             align-items: center;
+
             justify-content: center;
+
             padding: 10px 15px;
+
             border-radius: 6px;
+
             color: #FFF;
+
             font-weight: bold;
+
             font-size: 14px;
+
         }
 
 
         .btn-limpar:hover {
+
             background-color: #334155 !important;
+
         }
 
 
         .search-hint {
+
             font-size: 12px;
+
             color: #94A3B8;
+
             margin: 0;
+
         }
 
 
@@ -359,81 +535,125 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .produto-card {
+
             background-color: #1F2A44;
+
             border-radius: 12px;
+
             padding: 15px;
+
             margin-bottom: 18px;
+
             display: flex;
+
             flex-direction: column;
+
             box-shadow:
                 0 4px 6px rgba(0,0,0,0.3);
+
             border: 1px solid #2E3F66;
+
         }
 
 
         .prod-corpo {
+
             display: flex;
+
             gap: 20px;
+
             align-items: flex-start;
+
             flex-wrap: wrap;
+
         }
 
 
         .prod-fotos-container {
+
             display: flex;
+
             gap: 10px;
+
             flex-shrink: 0;
+
         }
 
 
         .prod-img-grande {
+
             width: 120px;
+
             height: 120px;
+
             background-color: #0F172A;
+
             border-radius: 10px;
+
             object-fit: cover;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+            display: block;
+
             color: #94A3B8;
+
             font-size: 11px;
+
             text-align: center;
+
             border: 2px solid #2563EB;
+
             box-shadow:
                 0 4px 10px rgba(0,0,0,0.5);
+
             cursor: pointer;
+
             transition:
                 transform 0.2s;
+
             padding: 4px;
-            box-sizing: border-box;
-            overflow: hidden;
+
         }
 
 
         .prod-img-grande:hover {
-            transform: scale(1.02);
+
+            transform: scale(1.03);
+
         }
 
 
         .prod-detalhes {
+
             flex-grow: 1;
+
             display: flex;
+
             flex-direction: column;
+
             gap: 6px;
+
         }
 
 
         .prod-nome {
+
             font-size: 18px;
+
             font-weight: bold;
+
             color: #E5E7EB;
+
         }
 
 
         .prod-preco {
+
             font-size: 17px;
+
             color: #22C55E;
+
             font-weight: bold;
+
         }
 
 
@@ -442,18 +662,31 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .sem-foto {
+
             width: 120px;
+
             height: 120px;
+
             background-color: #0F172A;
+
             border-radius: 10px;
+
             display: flex;
+
             align-items: center;
+
             justify-content: center;
+
             color: #94A3B8;
+
             font-size: 12px;
+
             text-align: center;
+
             border: 2px solid #475569;
+
             padding: 10px;
+
         }
 
 
@@ -462,55 +695,93 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .grade-container {
+
             margin-top: 15px;
+
             background-color: #0F172A;
+
             padding: 12px;
+
             border-radius: 8px;
+
             display: flex;
+
             flex-wrap: wrap;
+
             gap: 8px;
+
             align-items: center;
+
             justify-content: space-between;
+
             border: 1px solid #1E293B;
+
         }
 
 
         .tamanho-box {
+
             display: flex;
+
             flex-direction: column;
+
             align-items: center;
+
             background: #172033;
+
             padding: 6px 10px;
+
             border-radius: 6px;
+
             border: 1px solid #2E3F66;
+
         }
 
 
         .tamanho-box label {
+
             font-size: 12px;
+
             color: #FACC15;
+
             font-weight: bold;
+
             margin-bottom: 2px;
+
         }
 
 
         .tamanho-estoque {
+
             font-size: 10px;
+
             color: #38BDF8;
+
             margin-bottom: 4px;
+
             font-weight: bold;
+
         }
 
 
         .tamanho-box input {
+
             width: 48px;
+
             height: 32px;
+
             background-color: #1F2A44;
+
             border: 1px solid #2E3F66;
+
             color: #FFF;
+
             text-align: center;
+
             border-radius: 4px;
+
             font-size: 14px;
+
         }
 
 
@@ -519,57 +790,96 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         .carrinho-float {
+
             position: fixed;
+
             bottom: 0;
+
             left: 0;
+
             right: 0;
+
             background-color: #1F2A44;
+
             padding: 15px;
+
             border-top: 2px solid #2563EB;
+
             box-shadow:
                 0 -4px 10px rgba(0,0,0,0.5);
+
             display: flex;
+
             flex-direction: column;
+
             gap: 10px;
+
             z-index: 100;
+
         }
 
 
         .form-cliente {
+
             display: flex;
+
             gap: 10px;
+
             flex-wrap: wrap;
+
         }
 
 
         .form-cliente input {
+
             flex-grow: 1;
+
             padding: 10px;
+
             border-radius: 6px;
+
             border: none;
+
             background-color: #0F172A;
+
             color: #FFF;
+
             font-size: 14px;
+
         }
 
 
         .btn-enviar {
+
             background-color: #22C55E;
+
             color: #000;
+
             font-weight: bold;
+
             border: none;
+
             padding: 12px;
+
             border-radius: 6px;
+
             font-size: 15px;
+
             cursor: pointer;
+
             text-align: center;
+
             width: 100%;
+
             text-decoration: none;
+
         }
 
 
         .btn-enviar:hover {
+
             background-color: #16a34a;
+
         }
 
 
@@ -578,50 +888,124 @@ TEMPLATE_HTML = """
            ==================================================== */
 
         #modalZoom {
+
             display: none;
+
             position: fixed;
+
             z-index: 9999;
+
             left: 0;
+
             top: 0;
+
             width: 100vw;
+
             height: 100vh;
+
             background-color:
                 rgba(0,0,0,0.92);
+
             align-items: center;
+
             justify-content: center;
+
+            padding: 20px;
+
         }
 
 
         .modal-conteudo {
-            width: 90vw;
-            max-width: 700px;
+
+            width: auto;
+
+            max-width: 92vw;
+
             height: auto;
-            max-height: 85vh;
+
+            max-height: 88vh;
+
             object-fit: contain;
+
             border-radius: 10px;
+
             background-color: #0F172A;
+
             border: 2px solid #2563EB;
+
+            box-shadow:
+                0 10px 40px rgba(0,0,0,0.7);
+
         }
 
 
         .fechar {
+
             position: fixed;
+
             top: 20px;
+
             right: 25px;
+
             color: #fff;
+
             font-size: 40px;
+
             font-weight: bold;
+
             cursor: pointer;
+
             z-index: 10000;
+
             background:
                 rgba(0,0,0,0.7);
+
             width: 45px;
+
             height: 45px;
+
             border-radius: 50%;
+
             display: flex;
+
             align-items: center;
+
             justify-content: center;
+
             border: 1px solid #fff;
+
+        }
+
+
+        .fechar:hover {
+
+            background-color: #2563EB;
+
+        }
+
+
+        /* ====================================================
+           AVISO SEM MOSTRUÁRIO
+           ==================================================== */
+
+        .sem-mostruario {
+
+            max-width: 900px;
+
+            margin: 20px auto;
+
+            padding: 20px;
+
+            text-align: center;
+
+            background: #1F2A44;
+
+            border: 1px solid #2E3F66;
+
+            border-radius: 12px;
+
+            color: #94A3B8;
+
         }
 
 
@@ -631,68 +1015,123 @@ TEMPLATE_HTML = """
 
         @media (max-width: 650px) {
 
+
             h1 {
+
                 font-size: 20px;
+
             }
 
 
             .container {
+
                 padding: 8px;
+
             }
 
 
             .search-row {
+
                 flex-direction: column;
+
             }
 
 
             .search-row button,
+
             .btn-limpar {
+
                 width: 100%;
+
             }
 
 
             .prod-corpo {
+
                 flex-direction: column;
+
             }
 
 
             .prod-fotos-container {
+
                 width: 100%;
+
                 justify-content: center;
+
             }
 
 
             .prod-img-grande,
+
             .sem-foto {
+
                 width: 150px;
+
                 height: 150px;
+
             }
 
 
             .prod-detalhes {
+
                 width: 100%;
+
             }
 
 
             .prod-nome {
+
                 font-size: 16px;
+
             }
 
 
             .slider-container {
+
                 margin: 10px;
+
             }
 
 
             .slide img {
+
                 height: 280px;
+
+            }
+
+
+            .slider-btn {
+
+                width: 38px;
+
+                height: 38px;
+
+                font-size: 20px;
+
+            }
+
+
+            .slider-prev {
+
+                left: 8px;
+
+            }
+
+
+            .slider-next {
+
+                right: 8px;
+
             }
 
 
             .form-cliente {
+
                 flex-direction: column;
+
             }
+
 
         }
 
@@ -722,26 +1161,24 @@ TEMPLATE_HTML = """
 
 
     <!-- ====================================================
-         SLIDER
+         SLIDER DE MOSTRUÁRIO
          ==================================================== -->
 
     {% if mostruarios %}
 
-    <div class="slider-container">
+    <div
+        class="slider-container"
+        id="sliderContainer"
+    >
+
 
         <button
+            type="button"
             class="slider-btn slider-prev"
             onclick="mudarSlide(-1)"
+            aria-label="Foto anterior"
         >
             &#10094;
-        </button>
-
-
-        <button
-            class="slider-btn slider-next"
-            onclick="mudarSlide(1)"
-        >
-            &#10095;
         </button>
 
 
@@ -759,12 +1196,19 @@ TEMPLATE_HTML = """
                         'ver_mostruario',
                         nome=img_nome
                     ) }}"
-                    alt="Mostruário"
+                    alt="Mostruário Ágil Mix - {{ img_nome }}"
+                    loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
+                    onclick="abrirZoom(this.src)"
+                    onerror="fotoSliderErro(this)"
                 >
 
 
                 <div class="slide-legenda">
-                    ✨ Ágil Mix Jeans Wear - Coleção em Destaque
+
+                    ✨ Ágil Mix Jeans Wear
+                    —
+                    Coleção em Destaque
+
                 </div>
 
             </div>
@@ -772,6 +1216,16 @@ TEMPLATE_HTML = """
             {% endfor %}
 
         </div>
+
+
+        <button
+            type="button"
+            class="slider-btn slider-next"
+            onclick="mudarSlide(1)"
+            aria-label="Próxima foto"
+        >
+            &#10095;
+        </button>
 
 
         <div
@@ -784,13 +1238,26 @@ TEMPLATE_HTML = """
             <span
                 class="dot {% if loop.first %}active{% endif %}"
                 onclick="definirSlide({{ loop.index0 }})"
+                aria-label="Ir para foto {{ loop.index }}"
             ></span>
 
             {% endfor %}
 
         </div>
 
+
     </div>
+
+
+    {% else %}
+
+
+    <div class="sem-mostruario">
+
+        📸 Nenhuma foto do mostruário foi encontrada.
+
+    </div>
+
 
     {% endif %}
 
@@ -813,7 +1280,9 @@ TEMPLATE_HTML = """
             class="search-container"
         >
 
+
             <div class="search-row">
+
 
                 <input
                     type="text"
@@ -824,7 +1293,9 @@ TEMPLATE_HTML = """
 
 
                 <button type="submit">
+
                     🔍 Buscar
+
                 </button>
 
 
@@ -834,23 +1305,29 @@ TEMPLATE_HTML = """
                     href="/"
                     class="btn-limpar"
                 >
+
                     Limpar
+
                 </a>
 
                 {% endif %}
+
 
             </div>
 
 
             <p class="search-hint">
+
                 💡 Dica: Você pode digitar várias referências ou termos de uma só vez.
+
             </p>
+
 
         </form>
 
 
         <!-- ==================================================
-             FORMULÁRIO DO PEDIDO
+             FORMULÁRIO
              ================================================== -->
 
         <form
@@ -862,21 +1339,20 @@ TEMPLATE_HTML = """
 
             {% for p in produtos %}
 
+
             <div class="produto-card">
 
 
                 <div class="prod-corpo">
 
 
-                    <!-- FOTO -->
+                    <!-- FOTO DO PRODUTO -->
 
                     <div class="prod-fotos-container">
 
 
-                        {% if p[0] %}
-
-
                         {% if p[14] %}
+
 
                         <img
                             src="{{ url_for(
@@ -890,30 +1366,26 @@ TEMPLATE_HTML = """
                                     prod_id=p[0]
                                 ) }}'
                             )"
-                            title="Foto do Produto - Ampliar"
+                            title="Clique para ampliar"
                             alt="Foto de {{ p[1] }}"
-                            onerror="fotoErro(this);"
+                            onerror="fotoErro(this)"
                         >
 
 
                         {% else %}
 
+
                         <div class="sem-foto">
+
                             📷<br>
+
                             Sem Foto
+
                         </div>
+
 
                         {% endif %}
 
-
-                        {% else %}
-
-                        <div class="sem-foto">
-                            📷<br>
-                            Sem Foto
-                        </div>
-
-                        {% endif %}
 
                     </div>
 
@@ -924,13 +1396,19 @@ TEMPLATE_HTML = """
 
 
                         <div class="prod-nome">
-                            {{ p[1] }} - {{ p[2] }}
+
+                            {{ p[1] }}
+                            -
+                            {{ p[2] }}
+
                         </div>
 
 
                         <div class="prod-preco">
+
                             R$
                             {{ "%.2f"|format(p[4]) }}
+
                         </div>
 
 
@@ -940,11 +1418,15 @@ TEMPLATE_HTML = """
                                 color: #94A3B8;
                             "
                         >
+
                             Grupo:
                             <b>{{ p[9] }}</b>
+
                             |
+
                             Ref:
                             <b>{{ p[10] }}</b>
+
                         </div>
 
 
@@ -954,13 +1436,13 @@ TEMPLATE_HTML = """
                                 color: #38BDF8;
                             "
                         >
+
                             Estoque Total:
                             <b>{{ p[5] }}</b>
                             un
+
                         </div>
 
-
-                        {% if p[14] %}
 
                         <div
                             style="
@@ -969,14 +1451,15 @@ TEMPLATE_HTML = """
                                 margin-top: 4px;
                             "
                         >
+
                             📷 Foto:
                             {{ p[14] }}
-                        </div>
 
-                        {% endif %}
+                        </div>
 
 
                     </div>
+
 
                 </div>
 
@@ -990,6 +1473,7 @@ TEMPLATE_HTML = """
 
                 {% if grade_dict %}
 
+
                 <div class="grade-container">
 
 
@@ -1001,7 +1485,9 @@ TEMPLATE_HTML = """
                             margin-bottom: 2px;
                         "
                     >
+
                         Quantidade por Tamanho:
+
                     </span>
 
 
@@ -1012,12 +1498,16 @@ TEMPLATE_HTML = """
 
 
                         <label>
+
                             {{ tam }}
+
                         </label>
 
 
                         <span class="tamanho-estoque">
+
                             Disp: {{ qtd }}
+
                         </span>
 
 
@@ -1038,16 +1528,18 @@ TEMPLATE_HTML = """
 
                 </div>
 
+
                 {% endif %}
 
 
             </div>
 
+
             {% endfor %}
 
 
             <!-- ==================================================
-                 CARRINHO
+                 CARRINHO / WHATSAPP
                  ================================================== -->
 
             <div class="carrinho-float">
@@ -1079,7 +1571,9 @@ TEMPLATE_HTML = """
                     type="submit"
                     class="btn-enviar"
                 >
+
                     🚀 Enviar Pedido Pronto para o WhatsApp
+
                 </button>
 
 
@@ -1088,11 +1582,12 @@ TEMPLATE_HTML = """
 
         </form>
 
+
     </div>
 
 
     <!-- ====================================================
-         MODAL
+         MODAL DE ZOOM
          ==================================================== -->
 
     <div
@@ -1103,9 +1598,11 @@ TEMPLATE_HTML = """
 
         <span
             class="fechar"
-            onclick="fecharZoom()"
+            onclick="event.stopPropagation(); fecharZoom();"
         >
+
             &times;
+
         </span>
 
 
@@ -1113,6 +1610,7 @@ TEMPLATE_HTML = """
             class="modal-conteudo"
             id="imgAmpliada"
             onclick="event.stopPropagation();"
+            alt="Imagem ampliada"
         >
 
 
@@ -1130,36 +1628,63 @@ TEMPLATE_HTML = """
            SLIDER
            ================================================== */
 
+
         let slideAtual = 0;
 
 
+        const sliderTrack =
+            document.getElementById(
+                'sliderTrack'
+            );
+
+
         const slides =
-            document.querySelectorAll('.slide');
+            document.querySelectorAll(
+                '.slide'
+            );
 
 
         const dots =
-            document.querySelectorAll('.dot');
+            document.querySelectorAll(
+                '.dot'
+            );
 
 
         const totalSlides =
             slides.length;
 
 
+        let intervaloSlider = null;
+
+
+        /* ==================================================
+           MOSTRAR SLIDE
+           ================================================== */
+
         function mostrarSlide(index) {
 
 
-            if (totalSlides === 0) {
+            if (
+                !sliderTrack ||
+                totalSlides === 0
+            ) {
+
                 return;
+
             }
 
 
-            if (index >= totalSlides) {
+            if (
+                index >= totalSlides
+            ) {
 
                 slideAtual = 0;
 
             }
 
-            else if (index < 0) {
+            else if (
+                index < 0
+            ) {
 
                 slideAtual =
                     totalSlides - 1;
@@ -1173,20 +1698,10 @@ TEMPLATE_HTML = """
             }
 
 
-            const track =
-                document.getElementById(
-                    'sliderTrack'
-                );
-
-
-            if (track) {
-
-                track.style.transform =
-                    'translateX(' +
-                    (-slideAtual * 100) +
-                    '%';
-
-            }
+            sliderTrack.style.transform =
+                'translateX(-' +
+                (slideAtual * 100) +
+                '%)';
 
 
             dots.forEach(
@@ -1200,7 +1715,9 @@ TEMPLATE_HTML = """
             );
 
 
-            if (dots[slideAtual]) {
+            if (
+                dots[slideAtual]
+            ) {
 
                 dots[slideAtual]
                     .classList.add(
@@ -1212,32 +1729,218 @@ TEMPLATE_HTML = """
         }
 
 
+        /* ==================================================
+           PRÓXIMO / ANTERIOR
+           ================================================== */
+
         function mudarSlide(direcao) {
+
 
             mostrarSlide(
                 slideAtual + direcao
             );
 
+
         }
 
+
+        /* ==================================================
+           FOTO ESPECÍFICA
+           ================================================== */
 
         function definirSlide(index) {
 
+
             mostrarSlide(index);
+
+
+            reiniciarSliderAutomatico();
+
 
         }
 
 
-        if (totalSlides > 1) {
+        /* ==================================================
+           SLIDER AUTOMÁTICO
+           ================================================== */
 
-            setInterval(
+        function iniciarSliderAutomatico() {
+
+
+            if (
+                totalSlides <= 1
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                intervaloSlider
+            ) {
+
+                clearInterval(
+                    intervaloSlider
+                );
+
+            }
+
+
+            intervaloSlider =
+                setInterval(
+                    function() {
+
+                        mudarSlide(1);
+
+                    },
+                    8000
+                );
+
+
+        }
+
+
+        function reiniciarSliderAutomatico() {
+
+
+            if (
+                intervaloSlider
+            ) {
+
+                clearInterval(
+                    intervaloSlider
+                );
+
+            }
+
+
+            iniciarSliderAutomatico();
+
+
+        }
+
+
+        iniciarSliderAutomatico();
+
+
+        /* ==================================================
+           PAUSAR QUANDO PASSAR O MOUSE
+           ================================================== */
+
+        const sliderContainer =
+            document.getElementById(
+                'sliderContainer'
+            );
+
+
+        if (
+            sliderContainer
+        ) {
+
+
+            sliderContainer.addEventListener(
+                'mouseenter',
                 function() {
 
-                    mudarSlide(1);
+                    if (
+                        intervaloSlider
+                    ) {
+
+                        clearInterval(
+                            intervaloSlider
+                        );
+
+                    }
+
+                }
+            );
+
+
+            sliderContainer.addEventListener(
+                'mouseleave',
+                function() {
+
+                    iniciarSliderAutomatico();
+
+                }
+            );
+
+
+        }
+
+
+        /* ==================================================
+           TOUCH / CELULAR
+           ================================================== */
+
+        let toqueInicialX = 0;
+
+        let toqueFinalX = 0;
+
+
+        if (
+            sliderContainer
+        ) {
+
+
+            sliderContainer.addEventListener(
+                'touchstart',
+                function(event) {
+
+                    toqueInicialX =
+                        event.changedTouches[0].screenX;
 
                 },
-                4000
+                {
+                    passive: true
+                }
             );
+
+
+            sliderContainer.addEventListener(
+                'touchend',
+                function(event) {
+
+                    toqueFinalX =
+                        event.changedTouches[0].screenX;
+
+
+                    const diferenca =
+                        toqueFinalX -
+                        toqueInicialX;
+
+
+                    if (
+                        Math.abs(diferenca) > 50
+                    ) {
+
+
+                        if (
+                            diferenca < 0
+                        ) {
+
+                            mudarSlide(1);
+
+                        }
+
+                        else {
+
+                            mudarSlide(-1);
+
+                        }
+
+
+                        reiniciarSliderAutomatico();
+
+                    }
+
+                },
+                {
+                    passive: true
+                }
+            );
+
 
         }
 
@@ -1250,26 +1953,30 @@ TEMPLATE_HTML = """
 
 
             if (!src) {
+
                 return;
+
             }
 
 
             const modal =
                 document.getElementById(
-                    "modalZoom"
+                    'modalZoom'
                 );
 
 
             const modalImg =
                 document.getElementById(
-                    "imgAmpliada"
+                    'imgAmpliada'
                 );
 
 
-            modal.style.display = "flex";
-
-
             modalImg.src = src;
+
+
+            modal.style.display =
+                'flex';
+
 
         }
 
@@ -1279,77 +1986,171 @@ TEMPLATE_HTML = """
 
             const modal =
                 document.getElementById(
-                    "modalZoom"
+                    'modalZoom'
                 );
 
 
             const modalImg =
                 document.getElementById(
-                    "imgAmpliada"
+                    'imgAmpliada'
                 );
 
 
-            modal.style.display = "none";
+            modal.style.display =
+                'none';
 
 
-            modalImg.src = "";
+            modalImg.src = '';
+
 
         }
 
 
         /* ==================================================
-           ERRO DE FOTO
+           ERRO FOTO PRODUTO
            ================================================== */
 
         function fotoErro(img) {
 
 
             if (!img) {
+
                 return;
+
             }
 
 
             const div =
                 document.createElement(
-                    "div"
+                    'div'
                 );
 
 
             div.className =
-                "sem-foto";
+                'sem-foto';
 
 
             div.innerHTML =
-                "📷<br>Foto não encontrada";
+                '📷<br>Foto não encontrada';
 
 
-            img.parentNode.replaceChild(
-                div,
-                img
-            );
+            if (
+                img.parentNode
+            ) {
+
+                img.parentNode.replaceChild(
+                    div,
+                    img
+                );
+
+            }
+
 
         }
 
 
         /* ==================================================
-           ESC FECHA ZOOM
+           ERRO FOTO SLIDER
+           ================================================== */
+
+        function fotoSliderErro(img) {
+
+
+            if (!img) {
+
+                return;
+
+            }
+
+
+            const slide =
+                img.parentElement;
+
+
+            if (
+                slide
+            ) {
+
+                slide.style.display =
+                    'none';
+
+            }
+
+
+            console.warn(
+                'Foto do mostruário não encontrada:',
+                img.src
+            );
+
+
+        }
+
+
+        /* ==================================================
+           TECLA ESC
            ================================================== */
 
         document.addEventListener(
-            "keydown",
+            'keydown',
             function(event) {
 
 
                 if (
-                    event.key === "Escape"
+                    event.key === 'Escape'
                 ) {
 
                     fecharZoom();
 
                 }
 
+
+                if (
+                    event.key === 'ArrowLeft'
+                ) {
+
+                    if (
+                        document.getElementById(
+                            'modalZoom'
+                        ).style.display !== 'flex'
+                    ) {
+
+                        mudarSlide(-1);
+
+                        reiniciarSliderAutomatico();
+
+                    }
+
+                }
+
+
+                if (
+                    event.key === 'ArrowRight'
+                ) {
+
+                    if (
+                        document.getElementById(
+                            'modalZoom'
+                        ).style.display !== 'flex'
+                    ) {
+
+                        mudarSlide(1);
+
+                        reiniciarSliderAutomatico();
+
+                    }
+
+                }
+
+
             }
         );
+
+
+        /* ==================================================
+           INICIAR PRIMEIRO SLIDE
+           ================================================== */
+
+        mostrarSlide(0);
 
 
     </script>
@@ -1390,79 +2191,132 @@ TEMPLATE_SUCESSO = """
 
 
         body {
+
             background-color: #172033;
+
             color: #E5E7EB;
+
             font-family:
                 'Segoe UI',
                 Tahoma,
                 Geneva,
                 Verdana,
                 sans-serif;
+
             margin: 0;
+
             padding: 0;
+
             display: flex;
+
             align-items: center;
+
             justify-content: center;
+
             height: 100vh;
+
             text-align: center;
+
         }
 
 
         .card-sucesso {
+
             background-color: #1F2A44;
+
             padding: 40px;
+
             border-radius: 12px;
+
             border: 1px solid #2E3F66;
+
             box-shadow:
                 0 4px 15px rgba(0,0,0,0.5);
+
             max-width: 450px;
+
             width: 90%;
+
         }
 
 
         h1 {
+
             color: #FACC15;
+
             font-size: 22px;
+
             margin-bottom: 10px;
+
         }
 
 
         p {
+
             color: #94A3B8;
+
             font-size: 15px;
+
             margin-bottom: 25px;
+
         }
 
 
         .btn-zap {
+
             background-color: #22C55E;
+
             color: #000;
+
             font-weight: bold;
+
             border: none;
+
             padding: 14px 20px;
+
             border-radius: 6px;
+
             font-size: 16px;
+
             cursor: pointer;
+
             text-decoration: none;
+
             display: inline-block;
+
             width: 100%;
+
             box-sizing: border-box;
+
             margin-bottom: 15px;
+
         }
 
 
         .btn-voltar {
+
             background-color: #0F172A;
+
             color: #38BDF8;
+
             font-weight: bold;
+
             border: 1px solid #2E3F66;
+
             padding: 12px 20px;
+
             border-radius: 6px;
+
             font-size: 14px;
+
             text-decoration: none;
+
             display: inline-block;
+
             width: 100%;
+
             box-sizing: border-box;
+
         }
 
 
@@ -1478,13 +2332,17 @@ TEMPLATE_SUCESSO = """
 
 
         <h1>
+
             Pedido Registrado com Sucesso! 🎉
+
         </h1>
 
 
         <p>
+
             O estoque foi atualizado e seu pedido foi montado.
             Clique abaixo para enviar para o WhatsApp da loja.
+
         </p>
 
 
@@ -1496,7 +2354,9 @@ TEMPLATE_SUCESSO = """
             class="btn-zap"
             onclick="executarWhatsApp()"
         >
+
             💬 Enviar Pedido para o WhatsApp
+
         </button>
 
 
@@ -1508,7 +2368,9 @@ TEMPLATE_SUCESSO = """
             id="btnVoltar"
             class="btn-voltar"
         >
+
             🔄 Voltar ao Catálogo
+
         </a>
 
 
@@ -1526,7 +2388,9 @@ TEMPLATE_SUCESSO = """
 
 
             if (!link_zap_raw) {
+
                 return;
+
             }
 
 
@@ -1550,6 +2414,7 @@ TEMPLATE_SUCESSO = """
                 300
             );
 
+
         }
 
 
@@ -1572,10 +2437,15 @@ def from_json_filter(s):
 
 
     if not s:
+
         return {}
 
 
-    if isinstance(s, dict):
+    if isinstance(
+        s,
+        dict
+    ):
+
         return s
 
 
@@ -1589,31 +2459,11 @@ def from_json_filter(s):
 
 
 # ============================================================
-# LISTAR FOTOS NUMERADAS
+# LISTAR FOTOS DOS PRODUTOS
 # ============================================================
 
 def listar_fotos_numeradas():
 
-    """
-    Localiza as fotos:
-
-        1.jpg
-        2.jpg
-        3.jpg
-        ...
-        10.bmp
-        11.jpg
-        12.jpg
-        13.jpg
-
-    Retorna um dicionário:
-
-        {
-            1: caminho_da_foto_1,
-            2: caminho_da_foto_2,
-            ...
-        }
-    """
 
     fotos = {}
 
@@ -1623,9 +2473,11 @@ def listar_fotos_numeradas():
     ):
 
         print()
+
         print(
             '[FOTOS] ERRO: pasta não encontrada:'
         )
+
         print(
             PASTA_PRODUTOS
         )
@@ -1635,9 +2487,10 @@ def listar_fotos_numeradas():
 
     try:
 
-        arquivos = os.listdir(
-            PASTA_PRODUTOS
-        )
+        arquivos =
+            os.listdir(
+                PASTA_PRODUTOS
+            )
 
     except Exception as erro:
 
@@ -1662,10 +2515,12 @@ def listar_fotos_numeradas():
             extensao.lower()
             not in EXTENSOES_IMAGEM
         ):
+
             continue
 
 
         if not nome_base.isdigit():
+
             continue
 
 
@@ -1680,18 +2535,23 @@ def listar_fotos_numeradas():
         )
 
 
-        if os.path.isfile(caminho):
+        if os.path.isfile(
+            caminho
+        ):
 
             fotos[numero] = caminho
 
 
     print()
+
     print(
         '[FOTOS] Fotos numeradas encontradas:'
     )
 
 
-    for numero in sorted(fotos):
+    for numero in sorted(
+        fotos
+    ):
 
         print(
             f'   {numero} -> '
@@ -1703,37 +2563,186 @@ def listar_fotos_numeradas():
 
 
 # ============================================================
-# VERIFICAR QUAL FOTO CORRESPONDE AO PRODUTO
+# LISTAR FOTOS DO MOSTRUÁRIO
 # ============================================================
 
-def obter_numero_foto_produto(prod_id):
+def listar_mostruarios():
 
-    """
-    IMPORTANTE:
 
-    Não usamos mais:
+    mostruarios = []
 
-        prod_id = número da foto
 
-    Em vez disso, pegamos TODOS os produtos da categoria
-    na mesma ordem em que aparecem no catálogo.
+    print()
 
-    Exemplo:
+    print(
+        '=' * 70
+    )
 
-        1º produto -> foto 1
-        2º produto -> foto 2
-        3º produto -> foto 3
-        etc.
+    print(
+        '[SLIDER] PROCURANDO FOTOS DO MOSTRUÁRIO'
+    )
 
-    Isso resolve o problema dos IDs do banco serem diferentes
-    dos nomes das fotos.
-    """
+    print(
+        '=' * 70
+    )
+
+    print(
+        '[SLIDER] Pasta:'
+    )
+
+    print(
+        PASTA_MOSTRUARIOS
+    )
+
+
+    if not os.path.isdir(
+        PASTA_MOSTRUARIOS
+    ):
+
+        print()
+
+        print(
+            '[SLIDER] ERRO: pasta não encontrada!'
+        )
+
+        print(
+            PASTA_MOSTRUARIOS
+        )
+
+        print(
+            '=' * 70
+        )
+
+        return mostruarios
+
+
+    try:
+
+        arquivos = os.listdir(
+            PASTA_MOSTRUARIOS
+        )
+
+
+        for arquivo in arquivos:
+
+
+            caminho = os.path.join(
+                PASTA_MOSTRUARIOS,
+                arquivo
+            )
+
+
+            if not os.path.isfile(
+                caminho
+            ):
+
+                continue
+
+
+            extensao = os.path.splitext(
+                arquivo
+            )[1].lower()
+
+
+            if (
+                extensao
+                in
+                EXTENSOES_IMAGEM
+            ):
+
+                mostruarios.append(
+                    arquivo
+                )
+
+
+    except Exception as erro:
+
+        print(
+            f'[SLIDER] ERRO ao ler pasta: {erro}'
+        )
+
+        return mostruarios
+
+
+    # ========================================================
+    # ORDENAÇÃO NATURAL
+    # ========================================================
+
+    def ordem_natural(nome):
+
+        partes = re.split(
+            r'(\\d+)',
+            nome
+        )
+
+
+        resultado = []
+
+
+        for parte in partes:
+
+
+            if parte.isdigit():
+
+                resultado.append(
+                    int(parte)
+                )
+
+            else:
+
+                resultado.append(
+                    parte.lower()
+                )
+
+
+        return resultado
+
+
+    mostruarios.sort(
+        key=ordem_natural
+    )
+
+
+    print()
+
+    print(
+        f'[SLIDER] '
+        f'{len(mostruarios)} foto(s) encontrada(s).'
+    )
+
+
+    for i, foto in enumerate(
+        mostruarios,
+        start=1
+    ):
+
+        print(
+            f'   {i} -> {foto}'
+        )
+
+
+    print(
+        '=' * 70
+    )
+
+
+    return mostruarios
+
+
+# ============================================================
+# DESCOBRIR FOTO DO PRODUTO
+# ============================================================
+
+def obter_numero_foto_produto(
+    prod_id
+):
 
 
     conn = None
 
 
     try:
+
 
         conn = sqlite3.connect(
             DB_PATH,
@@ -1751,26 +2760,36 @@ def obter_numero_foto_produto(prod_id):
             WHERE grupo LIKE ?
             ORDER BY nome ASC, id ASC
             ''',
-            ('%confec%',)
+            (
+                '%confec%',
+            )
         )
 
 
         produtos_ids = [
+
             linha[0]
-            for linha in cursor.fetchall()
+
+            for linha
+            in cursor.fetchall()
+
         ]
 
 
     except Exception as erro:
 
+
         print(
-            f'[FOTOS] Erro obtendo ordem dos produtos: {erro}'
+            '[FOTOS] '
+            f'Erro obtendo ordem: {erro}'
         )
+
 
         return None
 
 
     finally:
+
 
         if conn:
 
@@ -1779,135 +2798,90 @@ def obter_numero_foto_produto(prod_id):
 
     try:
 
-        posicao = produtos_ids.index(
-            prod_id
-        )
+
+        posicao =
+            produtos_ids.index(
+                prod_id
+            )
+
 
     except ValueError:
 
+
         print(
-            f'[FOTOS] Produto ID {prod_id} não está '
-            f'na lista do catálogo.'
+            f'[FOTOS] Produto ID '
+            f'{prod_id} não encontrado.'
         )
+
 
         return None
 
 
-    numero_foto = posicao + 1
-
-
-    return numero_foto
+    return posicao + 1
 
 
 # ============================================================
-# ROTA DA FOTO DO PRODUTO
+# SERVIR FOTO DO PRODUTO
 # ============================================================
 
 @app.route(
     '/ver_imagem_id/<int:prod_id>'
 )
-def ver_imagem_id(prod_id):
+def ver_imagem_id(
+    prod_id
+):
 
 
     print()
-    print(
-        '=' * 70
-    )
-
 
     print(
-        f'[FOTO] Produto ID solicitado: {prod_id}'
+        f'[FOTO] Produto solicitado: '
+        f'{prod_id}'
     )
 
 
-    print(
-        f'[FOTO] Pasta de imagens:'
-    )
-
-
-    print(
-        PASTA_PRODUTOS
-    )
-
-
-    # ========================================================
-    # DESCOBRE A POSIÇÃO DO PRODUTO
-    # ========================================================
-
-    numero_foto = obter_numero_foto_produto(
-        prod_id
-    )
+    numero_foto =
+        obter_numero_foto_produto(
+            prod_id
+        )
 
 
     if numero_foto is None:
 
-        print(
-            '[FOTO] Não foi possível determinar '
-            'a posição do produto.'
-        )
-
-
         return '', 404
 
 
-    print(
-        f'[FOTO] Produto está na posição: '
-        f'{numero_foto}'
-    )
+    fotos =
+        listar_fotos_numeradas()
 
 
-    # ========================================================
-    # LISTA FOTOS
-    # ========================================================
-
-    fotos = listar_fotos_numeradas()
-
-
-    caminho = fotos.get(
-        numero_foto
-    )
+    caminho =
+        fotos.get(
+            numero_foto
+        )
 
 
-    # ========================================================
-    # FOTO ENCONTRADA
-    # ========================================================
-
-    if caminho and os.path.isfile(
+    if (
         caminho
+        and
+        os.path.isfile(caminho)
     ):
 
 
         print(
-            f'[FOTO] ASSOCIAÇÃO CORRETA:'
-        )
-
-
-        print(
-            f'       Produto ID: {prod_id}'
-        )
-
-
-        print(
-            f'       Foto nº: {numero_foto}'
-        )
-
-
-        print(
-            f'       Arquivo: '
-            f'{os.path.basename(caminho)}'
-        )
-
-
-        print(
-            '=' * 70
+            f'[FOTO] Produto {prod_id} '
+            f'-> foto {numero_foto} '
+            f'-> {os.path.basename(caminho)}'
         )
 
 
         try:
 
-            resposta = make_response(
-                send_file(caminho)
-            )
+
+            resposta =
+                make_response(
+                    send_file(caminho)
+                )
 
 
             resposta.headers[
@@ -1923,51 +2897,19 @@ def ver_imagem_id(prod_id):
 
         except Exception as erro:
 
+
             print(
-                f'[FOTO] Erro enviando foto: {erro}'
+                f'[FOTO] Erro enviando foto: '
+                f'{erro}'
             )
 
 
             return '', 500
 
 
-    # ========================================================
-    # FOTO NÃO ENCONTRADA
-    # ========================================================
-
     print(
-        f'[FOTO] FOTO Nº {numero_foto} '
-        f'NÃO ENCONTRADA.'
-    )
-
-
-    print(
-        f'[FOTO] Esperado algum arquivo como:'
-    )
-
-
-    print(
-        f'       {numero_foto}.jpg'
-    )
-
-
-    print(
-        f'       {numero_foto}.jpeg'
-    )
-
-
-    print(
-        f'       {numero_foto}.png'
-    )
-
-
-    print(
-        f'       {numero_foto}.bmp'
-    )
-
-
-    print(
-        '=' * 70
+        f'[FOTO] Foto {numero_foto} '
+        f'não encontrada.'
     )
 
 
@@ -1975,47 +2917,73 @@ def ver_imagem_id(prod_id):
 
 
 # ============================================================
-# MOSTRUÁRIO
+# SERVIR FOTO DO MOSTRUÁRIO
 # ============================================================
 
 @app.route(
     '/ver_mostruario/<path:nome>'
 )
-def ver_mostruario(nome):
+def ver_mostruario(
+    nome
+):
 
+
+    # Segurança:
+    # impede que seja utilizado caminho externo.
 
     nome = os.path.basename(
         nome
     )
 
 
-    caminho_completo = os.path.join(
-        PASTA_MOSTRUARIOS,
-        nome
-    )
+    caminho =
+        os.path.join(
+            PASTA_MOSTRUARIOS,
+            nome
+        )
 
 
-    if os.path.isfile(
-        caminho_completo
+    if (
+        os.path.isfile(caminho)
     ):
 
 
-        resposta = make_response(
-            send_file(
-                caminho_completo
+        try:
+
+
+            resposta =
+                make_response(
+                    send_file(caminho)
+                )
+
+
+            resposta.headers[
+                'Cache-Control'
+            ] = (
+                'no-store, no-cache, '
+                'must-revalidate, max-age=0'
             )
-        )
 
 
-        resposta.headers[
-            'Cache-Control'
-        ] = (
-            'no-store, no-cache, '
-            'must-revalidate, max-age=0'
-        )
+            return resposta
 
 
-        return resposta
+        except Exception as erro:
+
+
+            print(
+                f'[SLIDER] Erro enviando '
+                f'{nome}: {erro}'
+            )
+
+
+            return '', 500
+
+
+    print(
+        f'[SLIDER] Arquivo não encontrado: '
+        f'{caminho}'
+    )
 
 
     return '', 404
@@ -2029,58 +2997,30 @@ def ver_mostruario(nome):
 def index():
 
 
-    termo_busca = request.args.get(
-        'busca',
-        ''
-    ).strip()
+    termo_busca =
+        request.args.get(
+            'busca',
+            ''
+        ).strip()
 
 
     # ========================================================
     # MOSTRUÁRIOS
     # ========================================================
 
-    mostruarios = []
-
-
-    if os.path.isdir(
-        PASTA_MOSTRUARIOS
-    ):
-
-
-        mostruarios = [
-
-            f
-
-            for f in os.listdir(
-                PASTA_MOSTRUARIOS
-            )
-
-            if f.lower().endswith(
-                (
-                    '.png',
-                    '.jpg',
-                    '.jpeg',
-                    '.webp',
-                    '.gif'
-                )
-            )
-
-        ]
-
-
-        mostruarios.sort(
-            key=lambda x: x.lower()
-        )
+    mostruarios =
+        listar_mostruarios()
 
 
     # ========================================================
     # BANCO
     # ========================================================
 
-    conn = sqlite3.connect(
-        DB_PATH,
-        timeout=10.0
-    )
+    conn =
+        sqlite3.connect(
+            DB_PATH,
+            timeout=10.0
+        )
 
 
     conn.execute(
@@ -2088,7 +3028,8 @@ def index():
     )
 
 
-    cursor = conn.cursor()
+    cursor =
+        conn.cursor()
 
 
     try:
@@ -2101,7 +3042,8 @@ def index():
         if termo_busca:
 
 
-            palavras = termo_busca.split()
+            palavras =
+                termo_busca.split()
 
 
             condicoes = []
@@ -2127,9 +3069,8 @@ def index():
                 )
 
 
-                p_like = (
+                p_like =
                     f'%{palavra}%'
-                )
 
 
                 parametros.extend(
@@ -2142,7 +3083,7 @@ def index():
                 )
 
 
-            sql_where = (
+            sql_where =
                 'WHERE grupo LIKE ? AND ('
                 +
                 ' OR '.join(
@@ -2150,7 +3091,6 @@ def index():
                 )
                 +
                 ')'
-            )
 
 
             query = f'''
@@ -2212,11 +3152,14 @@ def index():
 
             cursor.execute(
                 query,
-                ('%confec%',)
+                (
+                    '%confec%',
+                )
             )
 
 
-        produtos_originais = cursor.fetchall()
+        produtos_originais =
+            cursor.fetchall()
 
 
     finally:
@@ -2225,37 +3168,31 @@ def index():
 
 
     # ========================================================
-    # PREPARA A NUMERAÇÃO DAS FOTOS
+    # MAPA GLOBAL DAS FOTOS
+    #
+    # MUITO IMPORTANTE:
+    #
+    # A ordem é calculada com TODOS os produtos,
+    # antes da busca.
+    #
+    # Portanto:
+    #
+    # Produto 1 -> 1.jpg
+    # Produto 2 -> 2.jpg
+    # Produto 3 -> 3.jpg
+    #
+    # Uma pesquisa não altera essa associação.
     # ========================================================
 
-    # Para cada produto mostrado, acrescentamos:
-    #
-    # p[14] = número da foto
-    #
-    # Assim:
-    #
-    # p[14] = 1
-    # p[14] = 2
-    # p[14] = 3
-    # ...
-    #
-    # ou None quando não existir foto.
+    conn =
+        sqlite3.connect(
+            DB_PATH,
+            timeout=10.0
+        )
 
 
-    produtos = []
-
-
-    # Primeiro precisamos da lista GLOBAL de produtos
-    # para que uma busca não mude a associação das fotos.
-
-
-    conn = sqlite3.connect(
-        DB_PATH,
-        timeout=10.0
-    )
-
-
-    cursor = conn.cursor()
+    cursor =
+        conn.cursor()
 
 
     try:
@@ -2268,13 +3205,19 @@ def index():
             WHERE grupo LIKE ?
             ORDER BY nome ASC, id ASC
             ''',
-            ('%confec%',)
+            (
+                '%confec%',
+            )
         )
 
 
         ids_ordem = [
+
             linha[0]
-            for linha in cursor.fetchall()
+
+            for linha
+            in cursor.fetchall()
+
         ]
 
 
@@ -2291,48 +3234,60 @@ def index():
         start=1
     ):
 
+
         mapa_fotos[
             id_produto
         ] = indice
 
 
     # ========================================================
-    # VERIFICA QUAIS FOTOS REALMENTE EXISTEM
+    # FOTOS EXISTENTES
     # ========================================================
 
-    fotos_existentes = listar_fotos_numeradas()
+    fotos_existentes =
+        listar_fotos_numeradas()
 
 
     # ========================================================
-    # ADICIONA O NÚMERO DA FOTO
+    # ADICIONAR FOTO AO PRODUTO
     # ========================================================
 
-    for produto in produtos_originais:
+    produtos = []
 
 
-        prod_id = produto[0]
+    for produto
+    in produtos_originais:
 
 
-        numero_foto = mapa_fotos.get(
-            prod_id
-        )
+        prod_id =
+            produto[0]
 
 
-        # Só informa foto se o arquivo existir
-        if numero_foto in fotos_existentes:
+        numero_foto =
+            mapa_fotos.get(
+                prod_id
+            )
 
-            numero_foto_final = numero_foto
+
+        if (
+            numero_foto
+            in
+            fotos_existentes
+        ):
+
+            numero_foto_final =
+                numero_foto
 
         else:
 
-            numero_foto_final = None
+            numero_foto_final =
+                None
 
 
-        produto_novo = (
-            produto
-            +
-            (numero_foto_final,)
-        )
+        produto_novo =
+            produto + (
+                numero_foto_final,
+            )
 
 
         produtos.append(
@@ -2349,7 +3304,7 @@ def index():
 
 
     # ========================================================
-    # RENDERIZA
+    # RENDERIZAR
     # ========================================================
 
     return render_template_string(
@@ -2376,16 +3331,18 @@ def index():
 def enviar_pedido():
 
 
-    nome = request.form.get(
-        'cliente_nome',
-        'Cliente'
-    )
+    nome =
+        request.form.get(
+            'cliente_nome',
+            'Cliente'
+        )
 
 
-    tel = request.form.get(
-        'cliente_tel',
-        ''
-    )
+    tel =
+        request.form.get(
+            'cliente_tel',
+            ''
+        )
 
 
     itens_pedido = []
@@ -2394,10 +3351,11 @@ def enviar_pedido():
     total_geral = 0.0
 
 
-    conn = sqlite3.connect(
-        DB_PATH,
-        timeout=10.0
-    )
+    conn =
+        sqlite3.connect(
+            DB_PATH,
+            timeout=10.0
+        )
 
 
     conn.execute(
@@ -2405,7 +3363,8 @@ def enviar_pedido():
     )
 
 
-    cursor = conn.cursor()
+    cursor =
+        conn.cursor()
 
 
     try:
@@ -2440,7 +3399,8 @@ def enviar_pedido():
         # ITENS
         # ====================================================
 
-        for chave, value in request.form.items():
+        for chave, value
+        in request.form.items():
 
 
             if not chave.startswith(
@@ -2450,11 +3410,10 @@ def enviar_pedido():
                 continue
 
 
-            qtd = (
+            qtd =
                 int(value)
                 if value.isdigit()
                 else 0
-            )
 
 
             if qtd <= 0:
@@ -2462,9 +3421,8 @@ def enviar_pedido():
                 continue
 
 
-            partes = chave.split(
-                '_'
-            )
+            partes =
+                chave.split('_')
 
 
             if len(partes) < 3:
@@ -2472,12 +3430,14 @@ def enviar_pedido():
                 continue
 
 
-            prod_id = partes[1]
+            prod_id =
+                partes[1]
 
 
-            tamanho = '_'.join(
-                partes[2:]
-            )
+            tamanho =
+                '_'.join(
+                    partes[2:]
+                )
 
 
             cursor.execute(
@@ -2491,11 +3451,14 @@ def enviar_pedido():
                 FROM produtos
                 WHERE id = ?
                 ''',
-                (prod_id,)
+                (
+                    prod_id,
+                )
             )
 
 
-            p = cursor.fetchone()
+            p =
+                cursor.fetchone()
 
 
             if not p:
@@ -2512,9 +3475,8 @@ def enviar_pedido():
             ) = p
 
 
-            subtotal = (
+            subtotal =
                 qtd * preco
-            )
 
 
             total_geral += subtotal
@@ -2539,7 +3501,10 @@ def enviar_pedido():
                 f'(Tam: {tamanho}) '
                 f'- R$ '
                 f'{subtotal:.2f}'
-                .replace('.', ',')
+                .replace(
+                    '.',
+                    ','
+                )
 
             )
 
@@ -2549,6 +3514,7 @@ def enviar_pedido():
             # ================================================
 
             try:
+
 
                 grade_dict = (
 
@@ -2562,26 +3528,32 @@ def enviar_pedido():
 
                 )
 
+
             except Exception:
+
 
                 grade_dict = {}
 
 
-            atual_tam = float(
-                grade_dict.get(
-                    tamanho,
-                    0.0
+            atual_tam =
+                float(
+                    grade_dict.get(
+                        tamanho,
+                        0.0
+                    )
                 )
-            )
 
 
-            novo_tam = max(
-                0.0,
-                atual_tam - qtd
-            )
+            novo_tam =
+                max(
+                    0.0,
+                    atual_tam - qtd
+                )
 
 
-            grade_dict[tamanho] = (
+            grade_dict[
+                tamanho
+            ] = (
 
                 int(novo_tam)
 
@@ -2593,20 +3565,16 @@ def enviar_pedido():
 
 
             # ================================================
-            # ESTOQUE GERAL
+            # ESTOQUE
             # ================================================
 
-            novo_est_geral = max(
-
-                0.0,
-
-                float(
-                    estoque_geral or 0
+            novo_est_geral =
+                max(
+                    0.0,
+                    float(
+                        estoque_geral or 0
+                    ) - qtd
                 )
-                -
-                qtd
-
-            )
 
 
             cursor.execute(
@@ -2621,10 +3589,12 @@ def enviar_pedido():
                 ''',
                 (
                     novo_est_geral,
+
                     json.dumps(
                         grade_dict,
                         ensure_ascii=False
                     ),
+
                     prod_id
                 )
             )
@@ -2653,9 +3623,10 @@ def enviar_pedido():
         # REGISTRA CONTA
         # ====================================================
 
-        data_atual = datetime.now().strftime(
-            '%d/%m/%Y %H:%M'
-        )
+        data_atual =
+            datetime.now().strftime(
+                '%d/%m/%Y %H:%M'
+            )
 
 
         cursor.execute(
@@ -2695,7 +3666,7 @@ def enviar_pedido():
 
 
     # ========================================================
-    # WHATSAPP
+    # MENSAGEM WHATSAPP
     # ========================================================
 
     msg = (
@@ -2714,18 +3685,17 @@ def enviar_pedido():
 
         f'\n\n*Valor Total:* '
         f'R$ {total_geral:.2f}'
-        .replace('.', ',')
+        .replace(
+            '.',
+            ','
+        )
 
-    )
+        +
 
-
-    msg += (
         '\nAguardando instruções '
         'de pagamento e entrega.'
+
     )
-
-
-    import urllib.parse
 
 
     link_zap = (
@@ -2749,7 +3719,9 @@ def enviar_pedido():
 
 
     return redirect(
-        url_for('sucesso')
+        url_for(
+            'sucesso'
+        )
     )
 
 
@@ -2757,7 +3729,9 @@ def enviar_pedido():
 # SUCESSO
 # ============================================================
 
-@app.route('/sucesso')
+@app.route(
+    '/sucesso'
+)
 def sucesso():
 
 
@@ -2810,6 +3784,7 @@ if __name__ == '__main__':
 
 
     print()
+
     print(
         '=' * 70
     )
@@ -2826,44 +3801,48 @@ if __name__ == '__main__':
 
 
     print()
+
     print(
         'BASE DO PROGRAMA:'
     )
+
     print(
         BASE_DIR
     )
 
 
     print()
+
     print(
         'BANCO DE DADOS:'
     )
+
     print(
         DB_PATH
     )
 
 
     print()
+
     print(
         'PASTA DE PRODUTOS:'
     )
+
     print(
         PASTA_PRODUTOS
     )
 
 
     print()
+
     print(
         'PASTA DE MOSTRUÁRIOS:'
     )
+
     print(
         PASTA_MOSTRUARIOS
     )
 
-
-    # ========================================================
-    # TESTES
-    # ========================================================
 
     print()
 
@@ -2887,19 +3866,18 @@ if __name__ == '__main__':
         PASTA_PRODUTOS
     ):
 
-        fotos = listar_fotos_numeradas()
+        fotos =
+            listar_fotos_numeradas()
 
 
-        print()
         print(
-            f'[OK] Pasta de produtos encontrada.'
+            '[OK] Pasta de produtos encontrada.'
         )
 
 
         print(
-            f'[OK] {len(fotos)} fotos numeradas encontradas.'
+            f'[OK] {len(fotos)} fotos de produtos encontradas.'
         )
-
 
     else:
 
@@ -2908,7 +3886,32 @@ if __name__ == '__main__':
         )
 
 
+    if os.path.isdir(
+        PASTA_MOSTRUARIOS
+    ):
+
+        mostruarios =
+            listar_mostruarios()
+
+
+        print(
+            '[OK] Pasta de mostruários encontrada.'
+        )
+
+
+        print(
+            f'[OK] {len(mostruarios)} fotos de mostruário encontradas.'
+        )
+
+    else:
+
+        print(
+            '[ERRO] Pasta de mostruários NÃO encontrada!'
+        )
+
+
     print()
+
     print(
         'Servidor iniciando em:'
     )
@@ -2920,6 +3923,7 @@ if __name__ == '__main__':
 
 
     print()
+
     print(
         '=' * 70
     )
