@@ -11,6 +11,7 @@ from flask import (
     send_file,
     session,
     url_for,
+    make_response,
 )
 
 app = Flask(__name__)
@@ -134,7 +135,6 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {# Puxa a foto usando o ID exato do produto (1.jpg, 2.jpg, 3.jpg...) #}
                         {% if p[0] %}
                         <img src="{{ url_for('ver_imagem_id', prod_id=p[0]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem_id', prod_id=p[0]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
@@ -292,7 +292,10 @@ def ver_imagem_id(prod_id):
   for ext in extensoes:
     caminho = os.path.join(pasta_produtos, f'{prod_id}{ext}')
     if os.path.exists(caminho):
-      return send_file(caminho)
+      response = make_response(send_file(caminho))
+      # Desativa o cache do navegador para nunca carregar imagem antiga
+      response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+      return response
 
   return '', 404
 
@@ -301,7 +304,9 @@ def ver_imagem_id(prod_id):
 def ver_mostruario(nome):
   caminho_completo = os.path.join(PASTA_MOSTRUARIOS, nome)
   if os.path.exists(caminho_completo):
-    return send_file(caminho_completo)
+    response = make_response(send_file(caminho_completo))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
   return '', 404
 
 
