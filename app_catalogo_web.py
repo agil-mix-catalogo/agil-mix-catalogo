@@ -284,28 +284,53 @@ def from_json_filter(s):
 
 @app.route('/ver_imagem_id/<int:prod_id>')
 def ver_imagem_id(prod_id):
-  pasta_produtos = os.path.join('imagens', 'produtos')
-  if not os.path.exists(pasta_produtos):
+  conn = sqlite3.connect(DB_PATH, timeout=5.0)
+  cursor = conn.cursor()
+  cursor.execute('SELECT foto_caminho, codigo, referencia FROM produtos WHERE id = ?', (prod_id,))
+  res = cursor.fetchone()
+  conn.close()
+
+  if not res:
     return '', 404
 
-  # 1. Tenta encontrar pelo ID numérico exato (ex: 1.jpeg, 2.jpg)
-  for arquivo in os.listdir(pasta_produtos):
-    nome_sem_ext, _ = os.path.splitext(arquivo)
-    if nome_sem_ext.strip() == str(prod_id):
-      caminho = os.path.join(pasta_produtos, arquivo)
-      response = make_response(send_file(caminho))
+  foto_caminho_db, codigo_prod, ref_prod = res
+  pasta_produtos = os.path.join('imagens', 'produtos')
+
+  # 1. Se o banco tem um caminho de foto salvo, tenta extrair o nome do arquivo dele
+  if foto_caminho_db:
+    nome_arquivo_db = os.path.basename(str(foto_caminho_db).strip())
+    caminho_tentativa = os.path.join(pasta_produtos, nome_arquivo_db)
+    if os.path.exists(caminho_tentativa):
+      response = make_response(send_file(caminho_tentativa))
       response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
       return response
 
-  # 2. SE NÃO ACHAR PELO ID EXATO, PEGA A PRIMEIRA IMAGEM DISPONÍVEL NA PASTA (Garante que nenhuma fique em branco)
-  arquivos_validos = [f for f in os.listdir(pasta_produtos) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp'))]
-  if arquivos_validos:
-    # Seleciona de forma cíclica baseada no ID para distribuir as imagens
-    indice = (prod_id - 1) % len(arquivos_validos)
-    caminho = os.path.join(pasta_produtos, arquivos_validos[indice])
-    response = make_response(send_file(caminho))
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    return response
+  # 2. Tenta buscar combinando com o código ou referência do produto
+  termos_busca = [str(prod_id)]
+  if codigo_prod:
+    termos_busca.append(str(codigo_prod).strip())
+  if ref_prod:
+    termos_busca.append(str(ref_prod).strip())
+
+  if os.path.exists(pasta_produtos):
+    for arquivo in os.listdir(pasta_produtos):
+      nome_sem_ext, _ = os.path.splitext(arquivo)
+      for termo in termos_busca:
+        if nome_sem_ext.strip().lower() == termo.lower() or termo.lower() in nome_sem_ext.strip().lower():
+          caminho = os.path.join(pasta_produtos, arquivo)
+          response = make_response(send_file(caminho))
+          response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+          return response
+
+  # 3. Fallback de segurança: pega qualquer imagem disponível na pasta para não deixar vazio
+  if os.path.exists(pasta_produtos):
+    arquivos_validos = [f for f in os.listdir(pasta_produtos) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp'))]
+    if arquivos_validos:
+      indice = (prod_id - 1) % len(arquivos_validos)
+      caminho = os.path.join(pasta_produtos, arquivos_validos[indice])
+      response = make_response(send_file(caminho))
+      response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+      return response
 
   return '', 404
 
