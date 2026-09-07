@@ -134,9 +134,9 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {# Passamos o código do produto (p[1]) para garantir a foto correta #}
+                        {# Enviamos o código (p[1]) e a referência (p[10]) para buscar a foto ideal #}
                         {% if p[1] %}
-                        <img src="{{ url_for('ver_imagem', codigo=p[1]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', codigo=p[1]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
+                        <img src="{{ url_for('ver_imagem', codigo=p[1], ref=p[10]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', codigo=p[1], ref=p[10]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
                         <div class="prod-img-grande">Sem Foto</div>
                         {% endif %}
@@ -282,21 +282,31 @@ def from_json_filter(s):
     return {}
 
 
-@app.route('/ver_imagem/<codigo>')
-def ver_imagem(codigo):
+@app.route('/ver_imagem')
+def ver_imagem():
+  codigo = request.args.get('codigo', '').strip()
+  ref = request.args.get('ref', '').strip()
+
   pasta_produtos = os.path.join('imagens', 'produtos')
   if not os.path.exists(pasta_produtos):
     return '', 404
 
-  # Procura na pasta de produtos por qualquer arquivo cujo nome comece com o código exato do produto (ex: '321564987')
-  for f in os.listdir(pasta_produtos):
+  arquivos = os.listdir(pasta_produtos)
+
+  # 1. Tenta achar pelo código exato do produto no nome do arquivo
+  for f in arquivos:
     nome_sem_ext, _ = os.path.splitext(f)
-    if nome_sem_ext.strip().lower() == str(codigo).strip().lower():
+    if codigo and nome_sem_ext.strip().lower() == codigo.lower():
       return send_file(os.path.join(pasta_produtos, f))
 
-  # Segunda tentativa: verifica se o código está contido no nome do arquivo
-  for f in os.listdir(pasta_produtos):
-    if str(codigo).strip() in f:
+  # 2. Tenta achar pela referência do produto (ex: B640)
+  for f in arquivos:
+    if ref and ref.lower() in f.lower():
+      return send_file(os.path.join(pasta_produtos, f))
+
+  # 3. Tenta achar se o código está contido em alguma parte do arquivo
+  for f in arquivos:
+    if codigo and codigo in f:
       return send_file(os.path.join(pasta_produtos, f))
 
   return '', 404
