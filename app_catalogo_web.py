@@ -134,7 +134,6 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {# Enviamos o código (p[1]) e a referência (p[10]) para buscar a foto ideal #}
                         {% if p[1] %}
                         <img src="{{ url_for('ver_imagem', codigo=p[1], ref=p[10]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem', codigo=p[1], ref=p[10]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
@@ -250,7 +249,7 @@ TEMPLATE_SUCESSO = """
 </head>
 <body>
     <div class="card-sucesso">
-        <h1>Pedido Registrado com Sucesso! 🎉</h1>
+        <h1>Pedido Registrado com Successo! 🎉</h1>
         <p>O estoque foi atualizado e seu pedido foi montado. Clique abaixo para enviar para o WhatsApp da loja.</p>
         {% if disponivel and link_zap %}
         <button id="btnZap" class="btn-zap" onclick="executarWhatsApp()">💬 Enviar Pedido para o WhatsApp</button>
@@ -293,18 +292,24 @@ def ver_imagem():
 
   arquivos = os.listdir(pasta_produtos)
 
-  # 1. Tenta achar pelo código exato do produto no nome do arquivo
+  # 1. Tenta achar exato pelo código (ex: 321564987)
   for f in arquivos:
     nome_sem_ext, _ = os.path.splitext(f)
     if codigo and nome_sem_ext.strip().lower() == codigo.lower():
       return send_file(os.path.join(pasta_produtos, f))
 
-  # 2. Tenta achar pela referência do produto (ex: B640)
+  # 2. Tenta achar exato pela referência (ex: B640)
+  for f in arquivos:
+    nome_sem_ext, _ = os.path.splitext(f)
+    if ref and nome_sem_ext.strip().lower() == ref.lower():
+      return send_file(os.path.join(pasta_produtos, f))
+
+  # 3. Tenta achar se a referência está contida no nome do arquivo (ex: B640 dentro de B640.jpeg)
   for f in arquivos:
     if ref and ref.lower() in f.lower():
       return send_file(os.path.join(pasta_produtos, f))
 
-  # 3. Tenta achar se o código está contido em alguma parte do arquivo
+  # 4. Tenta achar se o código está contido no nome do arquivo
   for f in arquivos:
     if codigo and codigo in f:
       return send_file(os.path.join(pasta_produtos, f))
