@@ -134,9 +134,9 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {# Puxa a foto correspondente usando o código do produto (p[1]) ou a referência (p[10]) #}
-                        {% if p[1] %}
-                        <img src="{{ url_for('ver_imagem_codigo', codigo=p[1], ref=p[10]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem_codigo', codigo=p[1], ref=p[10]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
+                        {# Puxa a foto usando o ID exato do produto (1.jpg, 2.jpg, 3.jpg...) #}
+                        {% if p[0] %}
+                        <img src="{{ url_for('ver_imagem_id', prod_id=p[0]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem_id', prod_id=p[0]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
                         <div class="prod-img-grande">Sem Foto</div>
                         {% endif %}
@@ -282,44 +282,16 @@ def from_json_filter(s):
     return {}
 
 
-@app.route('/ver_imagem_codigo')
-def ver_imagem_codigo():
-  codigo = request.args.get('codigo', '').strip()
-  ref = request.args.get('ref', '').strip()
-
-  pastas = [
-      os.path.join('imagens', 'produtos'),
-      os.path.join('imagens', 'produtos', 'confeccoes'),
-  ]
+@app.route('/ver_imagem_id/<int:prod_id>')
+def ver_imagem_id(prod_id):
+  pasta_produtos = os.path.join('imagens', 'produtos')
+  if not os.path.exists(pasta_produtos):
+    return '', 404
 
   extensoes = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG']
-
-  todos_arquivos = []
-  for pasta in pastas:
-    if os.path.exists(pasta):
-      for f in os.listdir(pasta):
-        todos_arquivos.append((os.path.join(pasta, f), f))
-
-  # 1. Procura exato pelo código do produto (ex: 756206440.jpg)
-  for caminho, nome in todos_arquivos:
-    nome_sem_ext, _ = os.path.splitext(nome)
-    if codigo and nome_sem_ext.strip().lower() == codigo.lower():
-      return send_file(caminho)
-
-  # 2. Procura exato pela referência (ex: C640.jpg)
-  for caminho, nome in todos_arquivos:
-    nome_sem_ext, _ = os.path.splitext(nome)
-    if ref and nome_sem_ext.strip().lower() == ref.lower():
-      return send_file(caminho)
-
-  # 3. Procura se a referência está contida no nome do arquivo
-  for caminho, nome in todos_arquivos:
-    if ref and ref.lower() in nome.lower():
-      return send_file(caminho)
-
-  # 4. Procura se o código está contido no nome do arquivo
-  for caminho, nome in todos_arquivos:
-    if codigo and codigo in nome:
+  for ext in extensoes:
+    caminho = os.path.join(pasta_produtos, f'{prod_id}{ext}')
+    if os.path.exists(caminho):
       return send_file(caminho)
 
   return '', 404
