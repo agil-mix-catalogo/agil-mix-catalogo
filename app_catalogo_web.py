@@ -134,7 +134,7 @@ TEMPLATE_HTML = """
             <div class="produto-card">
                 <div class="prod-corpo">
                     <div class="prod-fotos-container">
-                        {# Puxa a foto usando o ID exato do produto (ex: 1.jpg, 2.jpg) #}
+                        {# Puxa a imagem sequencial baseada no ID do produto #}
                         {% if p[0] %}
                         <img src="{{ url_for('ver_imagem_id', prod_id=p[0]) }}" class="prod-img-grande" onclick="abrirZoom('{{ url_for('ver_imagem_id', prod_id=p[0]) }}')" title="Foto do Produto (Ampliar)" onerror="this.onerror=null; this.style.display='none';">
                         {% else %}
@@ -284,16 +284,26 @@ def from_json_filter(s):
 
 @app.route('/ver_imagem_id/<int:prod_id>')
 def ver_imagem_id(prod_id):
-  pasta_produtos = os.path.join('imagens', 'produtos')
-  if not os.path.exists(pasta_produtos):
-    return '', 404
+  # Procura nas pastas possíveis (raiz de produtos ou subpastas)
+  pastas = [
+      os.path.join('imagens', 'produtos'),
+      os.path.join('imagens', 'produtos', 'confeccoes'),
+  ]
 
-  # Procura por arquivos com o nome igual ao ID (ex: 1.jpg, 1.png, 1.jpeg)
   extensoes = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG']
-  for ext in extensoes:
-    caminho = os.path.join(pasta_produtos, f'{prod_id}{ext}')
-    if os.path.exists(caminho):
-      return send_file(caminho)
+
+  for pasta in pastas:
+    if os.path.exists(pasta):
+      # 1. Tenta achar pelo ID exato (ex: 1.jpg, 2.jpg)
+      for ext in extensoes:
+        caminho = os.path.join(pasta, f'{prod_id}{ext}')
+        if os.path.exists(caminho):
+          return send_file(caminho)
+
+      # 2. Se não achar pelo ID exato, pega a primeira imagem válida que encontrar na pasta (garantindo que qualquer foto apareça)
+      for f in os.listdir(pasta):
+        if f.lower().endswith(tuple(extensoes)):
+          return send_file(os.path.join(pasta, f))
 
   return '', 404
 
