@@ -1,2 +1,5 @@
 Flask
 gunicorn
+Flask==3.1.0
+reportlab==5.0.0
+Pillow>=9.0.0
