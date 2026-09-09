@@ -1540,7 +1540,7 @@ TEMPLATE_SUCESSO = """
 
 
         <a
-            href="{{ url_for('index') }}"
+            href="{{ url_for('voltar_catalogo') }}"
             id="btnVoltar"
             class="btn-voltar"
         >
@@ -1566,7 +1566,7 @@ TEMPLATE_SUCESSO = """
             }
 
 
-            // Agora consome o pedido (baixa estoque e gera financeiro) SOMENTE ao clicar no WhatsApp
+            // Baixa o estoque e gera financeiro SOMENTE ao clicar no WhatsApp
             fetch(
                 '/consumir_pedido',
                 {
@@ -2162,7 +2162,7 @@ def index():
 
 
 # ============================================================
-# ENVIAR PEDIDO (APENAS PRÉ-MONTA OS DADOS, SEM MEXER NO ESTOQUE)
+# ENVIAR PEDIDO (PRÉ-MONTA OS DADOS SEM MEXER NO ESTOQUE)
 # ============================================================
 
 @app.route(
@@ -2213,7 +2213,6 @@ def enviar_pedido():
             total_geral += subtotal
             ref_texto = f' (Ref: {referencia})' if referencia else ''
 
-            # Guardamos os dados brutos para processar o estoque só ao clicar no zap
             session.setdefault('itens_brutos', []).append({
                 'prod_id': prod_id,
                 'tamanho': tamanho,
@@ -2395,6 +2394,19 @@ def sucesso():
         )
 
     )
+
+
+# ============================================================
+# VOLTAR AO CATÁLOGO (LIMPA OS DADOS PARA NÃO BAIXAR ESTOQUE)
+# ============================================================
+
+@app.route('/voltar_catalogo')
+def voltar_catalogo():
+    session.pop('itens_brutos', None)
+    session.pop('link_zap', None)
+    session.pop('disponivel', None)
+    session.pop('pedido_info', None)
+    return redirect(url_for('index'))
 
 
 # ============================================================
