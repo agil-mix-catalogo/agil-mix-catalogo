@@ -3,6 +3,11 @@
 # ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE
 # ============================================================
 
+# ============================================================
+# app_catalogo_web.py
+# ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE
+# ============================================================
+
 import json
 import os
 import sqlite3
@@ -1240,7 +1245,7 @@ TEMPLATE_HTML = """
             setInterval(
                 function() {
 
-                    munarSlide(1);
+                    mudarSlide(1);
 
                 },
                 4000
@@ -1511,7 +1516,7 @@ TEMPLATE_SUCESSO = """
 
         <p>
             O estoque foi atualizado e seu pedido foi montado.
-            Escolha abaixo para enviar para o WhatsApp ou baixar o PDF.
+            Clique abaixo para enviar para o WhatsApp.
         </p>
 
 
@@ -1530,10 +1535,10 @@ TEMPLATE_SUCESSO = """
             href="{{ url_for('gerar_pdf_pedido') }}"
             id="btnPdf"
             class="btn-pdf"
-            onclick="consumirPedidoUnico()"
+            style="display: none;"
             target="_blank"
         >
-            📄 Baixar PDF (Meia Folha / Pacote)
+            📄 Baixar PDF do Pacote (Meia Folha)
         </a>
 
 
@@ -1559,26 +1564,6 @@ TEMPLATE_SUCESSO = """
             "{{ link_zap|safe if link_zap else '' }}";
 
 
-        function consumirPedidoUnico() {
-            fetch(
-                '/consumir_pedido',
-                {
-                    method: 'POST'
-                }
-            );
-
-            setTimeout(
-                function() {
-                    const btnZ = document.getElementById('btnZap');
-                    const btnP = document.getElementById('btnPdf');
-                    if (btnZ) btnZ.style.display = 'none';
-                    if (btnP) btnP.style.display = 'none';
-                },
-                400
-            );
-        }
-
-
         function executarWhatsApp() {
 
 
@@ -1587,7 +1572,25 @@ TEMPLATE_SUCESSO = """
             }
 
 
-            consumirPedidoUnico();
+            // Consome o pedido no backend para limpar a sessão
+            fetch(
+                '/consumir_pedido',
+                {
+                    method: 'POST'
+                }
+            );
+
+
+            // Oculta o botão de WhatsApp e mostra o botão de PDF após o envio
+            setTimeout(
+                function() {
+                    const btnZ = document.getElementById('btnZap');
+                    const btnP = document.getElementById('btnPdf');
+                    if (btnZ) btnZ.style.display = 'none';
+                    if (btnP) btnP.style.display = 'inline-block';
+                },
+                400
+            );
 
 
             setTimeout(
