@@ -1240,7 +1240,7 @@ TEMPLATE_HTML = """
             setInterval(
                 function() {
 
-                    mudarSlide(1);
+                    munarSlide(1);
 
                 },
                 4000
@@ -1528,7 +1528,9 @@ TEMPLATE_SUCESSO = """
 
         <a
             href="{{ url_for('gerar_pdf_pedido') }}"
+            id="btnPdf"
             class="btn-pdf"
+            onclick="consumirPedidoUnico()"
             target="_blank"
         >
             📄 Baixar PDF (Meia Folha / Pacote)
@@ -1557,6 +1559,26 @@ TEMPLATE_SUCESSO = """
             "{{ link_zap|safe if link_zap else '' }}";
 
 
+        function consumirPedidoUnico() {
+            fetch(
+                '/consumir_pedido',
+                {
+                    method: 'POST'
+                }
+            );
+
+            setTimeout(
+                function() {
+                    const btnZ = document.getElementById('btnZap');
+                    const btnP = document.getElementById('btnPdf');
+                    if (btnZ) btnZ.style.display = 'none';
+                    if (btnP) btnP.style.display = 'none';
+                },
+                400
+            );
+        }
+
+
         function executarWhatsApp() {
 
 
@@ -1565,12 +1587,7 @@ TEMPLATE_SUCESSO = """
             }
 
 
-            fetch(
-                '/consumir_pedido',
-                {
-                    method: 'POST'
-                }
-            );
+            consumirPedidoUnico();
 
 
             setTimeout(
