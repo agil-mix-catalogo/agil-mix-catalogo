@@ -3,11 +3,6 @@
 # ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE
 # ============================================================
 
-# ============================================================
-# app_catalogo_web.py
-# ÁGIL MIX JEANS WEAR - CATÁLOGO ONLINE
-# ============================================================
-
 import json
 import os
 import sqlite3
@@ -1515,8 +1510,7 @@ TEMPLATE_SUCESSO = """
 
 
         <p>
-            O estoque foi atualizado e seu pedido foi montado.
-            Clique abaixo para enviar para o WhatsApp.
+            Escolha abaixo para enviar para o WhatsApp e baixar o PDF do pacote.
         </p>
 
 
@@ -1572,7 +1566,7 @@ TEMPLATE_SUCESSO = """
             }
 
 
-            // Consome o pedido no backend para limpar a sessão
+            // Agora consome o pedido (baixa estoque e gera financeiro) SOMENTE ao clicar no WhatsApp
             fetch(
                 '/consumir_pedido',
                 {
@@ -1581,7 +1575,7 @@ TEMPLATE_SUCESSO = """
             );
 
 
-            // Oculta o botão de WhatsApp e mostra o botão de PDF após o envio
+            // Oculta o botão de WhatsApp e libera o botão de PDF
             setTimeout(
                 function() {
                     const btnZ = document.getElementById('btnZap');
@@ -2168,7 +2162,7 @@ def index():
 
 
 # ============================================================
-# ENVIAR PEDIDO
+# ENVIAR PEDIDO (APENAS PRÉ-MONTA OS DADOS, SEM MEXER NO ESTOQUE)
 # ============================================================
 
 @app.route(
@@ -2191,138 +2185,40 @@ def enviar_pedido():
 
     itens_pedido = []
     itens_pdf_dados = []
-
-
     total_geral = 0.0
-
 
     conn = sqlite3.connect(
         DB_PATH,
         timeout=10.0
     )
-
-
-    conn.execute(
-        'PRAGMA journal_mode=WAL;'
-    )
-
-
     cursor = conn.cursor()
 
-
     try:
-
-        cursor.execute(
-            '''
-            CREATE TABLE IF NOT EXISTS contas_receber (
-
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                cliente TEXT NOT NULL,
-
-                telefone TEXT,
-
-                valor REAL NOT NULL,
-
-                data TEXT NOT NULL,
-
-                status TEXT DEFAULT 'PENDENTE'
-
-            )
-            '''
-        )
-
-
         for chave, value in request.form.items():
+            if not chave.startswith('item_'): continue
+            qtd = int(value) if value.isdigit() else 0
+            if qtd <= 0: continue
 
-
-            if not chave.startswith(
-                'item_'
-            ):
-
-                continue
-
-
-            qtd = (
-                int(value)
-                if value.isdigit()
-                else 0
-            )
-
-
-            if qtd <= 0:
-
-                continue
-
-
-            partes = chave.split(
-                '_'
-            )
-
-
-            if len(partes) < 3:
-
-                continue
-
-
+            partes = chave.split('_')
+            if len(partes) < 3: continue
             prod_id = partes[1]
+            tamanho = '_'.join(partes[2:])
 
-
-            tamanho = '_'.join(
-                partes[2:]
-            )
-
-
-            cursor.execute(
-                '''
-                SELECT
-                    nome,
-                    preco,
-                    estoque,
-                    grade_json,
-                    referencia
-                FROM produtos
-                WHERE id = ?
-                ''',
-                (prod_id,)
-            )
-
-
+            cursor.execute('SELECT nome, preco, referencia FROM produtos WHERE id = ?', (prod_id,))
             p = cursor.fetchone()
+            if not p: continue
 
-
-            if not p:
-
-                continue
-
-
-            (
-                nome_prod,
-                preco,
-                estoque_geral,
-                grade_json_str,
-                referencia
-            ) = p
-
-
-            subtotal = (
-                qtd * preco
-            )
-
-
+            nome_prod, preco, referencia = p
+            subtotal = qtd * preco
             total_geral += subtotal
+            ref_texto = f' (Ref: {referencia})' if referencia else ''
 
-
-            ref_texto = (
-
-                f' (Ref: {referencia})'
-
-                if referencia
-
-                else ''
-
-            )
-
+            # Guardamos os dados brutos para processar o estoque só ao clicar no zap
+            session.setdefault('itens_brutos', []).append({
+                'prod_id': prod_id,
+                'tamanho': tamanho,
+                'qtd': qtd
+            })
 
             itens_pdf_dados.append({
                 'qtd': str(qtd),
@@ -2332,200 +2228,26 @@ def enviar_pedido():
                 'subtotal': f"R$ {subtotal:.2f}".replace('.', ',')
             })
 
-
             itens_pedido.append(
-
-                f'• {qtd}x '
-                f'{nome_prod}'
-                f'{ref_texto} '
-                f'(Tam: {tamanho}) '
-                f'- R$ '
-                f'{subtotal:.2f}'
-                .replace('.', ',')
-
+                f'• {qtd}x {nome_prod}{ref_texto} (Tam: {tamanho}) - R$ {subtotal:.2f}'.replace('.', ',')
             )
-
-
-            try:
-
-                grade_dict = (
-
-                    json.loads(
-                        grade_json_str
-                    )
-
-                    if grade_json_str
-
-                    else {}
-
-                )
-
-            except Exception:
-
-                grade_dict = {}
-
-
-            atual_tam = float(
-                grade_dict.get(
-                    tamanho,
-                    0.0
-                )
-            )
-
-
-            novo_tam = max(
-                0.0,
-                atual_tam - qtd
-            )
-
-
-            grade_dict[tamanho] = (
-
-                int(novo_tam)
-
-                if novo_tam.is_integer()
-
-                else novo_tam
-
-            )
-
-
-            novo_est_geral = max(
-
-                0.0,
-
-                float(
-                    estoque_geral or 0
-                )
-                -
-                qtd
-
-            )
-
-
-            cursor.execute(
-                '''
-                UPDATE produtos
-
-                SET
-                    estoque = ?,
-                    grade_json = ?
-
-                WHERE id = ?
-                ''',
-                (
-                    novo_est_geral,
-                    json.dumps(
-                        grade_dict,
-                        ensure_ascii=False
-                    ),
-                    prod_id
-                )
-            )
-
-
-        if not itens_pedido:
-
-            return (
-
-                "<script>"
-                "alert("
-                "'Selecione pelo menos um item na grade!'"
-                ");"
-                "window.history.back();"
-                "</script>"
-
-            )
-
-
-        data_atual = datetime.now().strftime(
-            '%d/%m/%Y %H:%M'
-        )
-
-
-        cursor.execute(
-            '''
-            INSERT INTO contas_receber
-            (
-                cliente,
-                telefone,
-                valor,
-                data,
-                status
-            )
-            VALUES
-            (
-                ?,
-                ?,
-                ?,
-                ?,
-                'PENDENTE'
-            )
-            ''',
-            (
-                nome,
-                tel,
-                total_geral,
-                data_atual
-            )
-        )
-
-
-        conn.commit()
-
 
     finally:
-
         conn.close()
 
+    if not itens_pedido:
+        return "<script>alert('Selecione pelo menos um item na grade!');window.history.back();</script>"
 
-    msg = (
+    msg = f'Olá! Meu nome é *{nome}* (WhatsApp: {tel}) e gostaria de fechar este pedido:\n\n' + '\n'.join(itens_pedido) + f'\n\n*Valor Total:* R$ {total_geral:.2f}'.replace('.', ',')
+    msg += '\nAguardando instruções de pagamento e entrega.'
 
-        f'Olá! Meu nome é *{nome}* '
-        f'(WhatsApp: {tel}) '
-        f'e gostaria de fechar este pedido:\n\n'
+    link_zap = 'https://web.whatsapp.com/send' f'?phone={WHATSAPP_LOJA}' f'&text=' f'{urllib.parse.quote(msg)}'
 
-        +
-
-        '\n'.join(
-            itens_pedido
-        )
-
-        +
-
-        f'\n\n*Valor Total:* '
-        f'R$ {total_geral:.2f}'
-        .replace('.', ',')
-
-    )
-
-
-    msg += (
-        '\nAguardando instruções '
-        'de pagamento e entrega.'
-    )
-
-
-    link_zap = (
-
-        'https://web.whatsapp.com/send'
-        f'?phone={WHATSAPP_LOJA}'
-        f'&text='
-        f'{urllib.parse.quote(msg)}'
-
-    )
-
-
-    session[
-        'link_zap'
-    ] = link_zap
-
-
-    session[
-        'disponivel'
-    ] = True
-
-
+    session['link_zap'] = link_zap
+    session['disponivel'] = True
+    session['cliente_nome'] = nome
+    session['cliente_tel'] = tel
+    session['total_geral'] = total_geral
     session['pedido_info'] = {
         'cliente': nome,
         'telefone': tel,
@@ -2533,7 +2255,6 @@ def enviar_pedido():
         'itens': itens_pdf_dados,
         'total': f"R$ {total_geral:.2f}".replace('.', ',')
     }
-
 
     return redirect(
         url_for('sucesso')
@@ -2677,7 +2398,7 @@ def sucesso():
 
 
 # ============================================================
-# CONSUMIR PEDIDO
+# CONSUMIR PEDIDO (BAIXA ESTOQUE E GERA FINANCEIRO AO CLICAR NO ZAP)
 # ============================================================
 
 @app.route(
@@ -2686,15 +2407,68 @@ def sucesso():
 )
 def consumir_pedido():
 
-    session[
-        'disponivel'
-    ] = False
+    itens_brutos = session.get('itens_brutos', [])
+    nome = session.get('cliente_nome', 'Cliente')
+    tel = session.get('cliente_tel', '')
+    total_geral = session.get('total_geral', 0.0)
 
+    if itens_brutos:
+        conn = sqlite3.connect(DB_PATH, timeout=10.0)
+        conn.execute('PRAGMA journal_mode=WAL;')
+        cursor = conn.cursor()
 
-    session[
-        'link_zap'
-    ] = ''
+        try:
+            cursor.execute('BEGIN TRANSACTION;')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS contas_receber (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cliente TEXT NOT NULL,
+                    telefone TEXT,
+                    valor REAL NOT NULL,
+                    data TEXT NOT NULL,
+                    status TEXT DEFAULT 'PENDENTE'
+                )
+            ''')
 
+            for item in itens_brutos:
+                prod_id = item['prod_id']
+                tamanho = item['tamanho']
+                qtd = item['qtd']
+
+                cursor.execute('SELECT estoque, grade_json FROM produtos WHERE id = ?', (prod_id,))
+                p = cursor.fetchone()
+                if not p: continue
+
+                estoque_geral, grade_json_str = p
+
+                try: grade_dict = json.loads(grade_json_str) if grade_json_str else {}
+                except Exception: grade_dict = {}
+
+                atual_tam = float(grade_dict.get(tamanho, 0.0))
+                novo_tam = max(0.0, atual_tam - qtd)
+                grade_dict[tamanho] = int(novo_tam) if novo_tam.is_integer() else novo_tam
+                novo_est_geral = max(0.0, float(estoque_geral or 0) - qtd)
+
+                cursor.execute('''
+                    UPDATE produtos SET estoque = ?, grade_json = ? WHERE id = ?
+                ''', (novo_est_geral, json.dumps(grade_dict, ensure_ascii=False), prod_id))
+
+            data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
+            cursor.execute('''
+                INSERT INTO contas_receber (cliente, telefone, valor, data, status)
+                VALUES (?, ?, ?, ?, 'PENDENTE')
+            ''', (nome, tel, total_geral, data_atual))
+
+            conn.commit()
+        except Exception as e:
+            if conn: conn.rollback()
+            raise e
+        finally:
+            if conn: conn.close()
+
+    session['disponivel'] = False
+    session['link_zap'] = ''
+    session.pop('itens_brutos', None)
 
     return '', 204
 
